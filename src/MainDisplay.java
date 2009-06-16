@@ -20,6 +20,7 @@ public class MainDisplay extends DisplayModule {
     private Command authCommand; //Go to Fire Eagle.
     private Command nextCommand; //Go to main app.
     private Command configCommand; //Go to configuration screen.
+    private Command errorCommand; //Go to the last error screen.
 
 
     public MainDisplay(GeoCrawler app) {
@@ -30,7 +31,9 @@ public class MainDisplay extends DisplayModule {
         authCommand = new Command("Fire Eagle...", Command.SCREEN, 1);
         nextCommand = new Command("My Location...", Command.SCREEN, 1);
         configCommand = new Command("Config", Command.SCREEN, 1);
+        errorCommand = new Command("Last error...", Command.SCREEN, 1);
         form.addCommand(this.getExitCommand());
+        form.addCommand(errorCommand); //Always keep this handy.
         form.setCommandListener(this);
     }
 
@@ -82,6 +85,8 @@ public class MainDisplay extends DisplayModule {
             app.handleNextState(GeoCrawler.STATE_MAP);
         } else if (c == configCommand) {
             app.handleNextState(GeoCrawler.STATE_CONFIG);
+        } else if (c == errorCommand) {
+            app.handleNextState(GeoCrawler.STATE_ERROR);
         } else {
             System.out.println("Unknown command received in main form.");
         }

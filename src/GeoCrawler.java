@@ -3,7 +3,6 @@
  * and open the template in the editor.
  */
 
-import javax.microedition.lcdui.Displayable;
 import javax.microedition.midlet.*;
 import javax.microedition.lcdui.Display;
 import javax.microedition.rms.RecordStoreException;
@@ -20,6 +19,7 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     public static final int STATE_FIREEAGLE = 3;
     public static final int STATE_MANUAL = 4;
     public static final int STATE_CONFIG = 5;
+    public static final int STATE_ERROR = 6;
 
     LocationMaster locationCollector;
     LocationData tempLoc; //Normally should be null, until the mapDisplay is ready.
@@ -35,6 +35,7 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     private ManualDisplay manualDisplay;
     private FireEagleDisplay fireEagleDisplay;
     private ConfigDisplay configDisplay;
+    private ErrorDisplay errorDisplay;
 
     private PersistentConfig configStore;
     private FireEagle fireEagleInstance;
@@ -113,6 +114,11 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
                 configDisplay = new ConfigDisplay(this);
             this.state = state;
             currentDisplay = configDisplay;
+        } else if (state == STATE_ERROR) {
+            if (errorDisplay == null)
+                errorDisplay = new ErrorDisplay(this);
+            this.state = state;
+            currentDisplay = errorDisplay;
         } else if (state == STATE_EXIT) {
             if ((locationCollector != null) && locationCollector.isRunning())
                 locationCollector.stop();
@@ -190,5 +196,23 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
             return locationCollector.setRunIntervalInMinutes((int)(dVal + 0.5));
         } else
             return false;
+    }
+
+    public void showError(String error, int nextState) {
+        if (error == null)
+            return;
+        setError(error);
+        state = nextState; //Spoof the return state for error display.
+        handleNextState(STATE_ERROR);
+    }
+
+    //Call to this method simply logs an error... does not show it.
+    public void setError(String error) {
+        if (error == null)
+            return;
+        if (errorDisplay == null) {
+            errorDisplay = new ErrorDisplay(this);
+        }
+        errorDisplay.setError(error);
     }
 }

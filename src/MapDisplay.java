@@ -93,10 +93,9 @@ public class MapDisplay extends DisplayModule {
         if (prevState != GeoCrawler.STATE_MAP)
             previousState = prevState;
 
-//        form.deleteAll(); //Grossly insufficient!
         if (currentLoc == null) {
             //Map not yet ready to be drawn.
-            app.handleNextState(previousState);
+            app.showError("Currently no location can be identified. If GPS is turned on, please wait for some time or check your configuration.", GeoCrawler.STATE_BEGIN);
             return;
         }
 
@@ -107,30 +106,37 @@ public class MapDisplay extends DisplayModule {
 
         String url = imageURL();
         if (url == null) {
-            System.err.println("Failed to retrieve image URL");
-            app.handleNextState(previousState); //This is wrong.
+            if (mapImage == null)
+                //We can't get an URL and there is no map to display.
+                app.showError("Could not communicate with Yahoo! maps service. Is your network connection enabled?", GeoCrawler.STATE_BEGIN);
+            else {
+                url = mapURL; //Don't shift the map.
+                app.setError("Failed to retrieve image URL for ("+Double.toString(this.getDisplayLat())+","+Double.toString(this.getDisplayLon())+")");
+            }
             return;
         }
         
         if ((mapURL == null) || !url.equals(mapURL)) {
+            Image img = null;
             try {
-                System.err.println("Map URL = "+url);
-                mapImage = HTTPUtil.loadImage(url);
+                img = HTTPUtil.loadImage(url);
             } catch (IOException ioe) {
-                System.err.println("Error getting image");
+                img = null; //Make sure that the image is null.
             }
-            if (mapImage != null)
+
+            if (img != null) {
+                mapImage = img;
                 mapURL = url;
-            else {
-                System.err.println("Failed to load image.");
-                app.handleNextState(previousState); //This is wrong.
+            } else
+                app.setError("Failed to load map image for ("+Double.toString(this.getDisplayLat())+","+Double.toString(this.getDisplayLon())+")");
+
+            if (mapImage == null) {
+                app.showError("Failed to load map image for ("+Double.toString(this.getDisplayLat())+","+Double.toString(this.getDisplayLon())+")", GeoCrawler.STATE_BEGIN);
                 return;
             }
         }
-//        form.append(new ImageItem(null, mapImage, 0, null));
         canvas.setImage(mapImage);
 
-//        app.getDisplay().setCurrent(form);
         if (prevState != GeoCrawler.STATE_MAP)
             app.getDisplay().setCurrent(canvas);
         else
