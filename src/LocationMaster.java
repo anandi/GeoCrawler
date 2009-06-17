@@ -261,20 +261,19 @@ public class LocationMaster extends Thread {
         if (location == null)
             return true; //Update anyway!
 
-        double latDiff = Math.abs(loc.getLatitude() - location.getLatitude());
-        double lonDiff = Math.abs(loc.getLongitude() - location.getLongitude());
-        if ((latDiff + lonDiff) > 0.00135) {
-            //This would normally qualify for an update, except that it cannot
-            //have happened too soon. If that is the case, then it means that
-            //there was a manual update in between.
-            long delayInMilli = loc.getTimeStamp().getTime()
-                                            - location.getTimeStamp().getTime();
-            if (delayInMilli < this.interval)
-                return false;
-            return true;
-        }
+        if (location.getDistance(loc) < loc.getErrorInMeters())
+            //Currently set location is within the error radius of the latest
+            //reading. Don't update.
+            return false;
 
-        return false;
+        //This would normally qualify for an update, except that it cannot
+        //have happened too soon. If that is the case, then it means that
+        //there was a manual update in between.
+        long delayInMilli = loc.getTimeStamp().getTime()
+                                            - location.getTimeStamp().getTime();
+        if (delayInMilli < this.interval)
+            return false;
+        return true;
     }
 
     public void stop() {

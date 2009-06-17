@@ -54,8 +54,11 @@ public class ManualDisplay extends DisplayModule {
         form.setCommandListener(this);
     }
 
-    public void display(int prevState) { //prevState is ignored.
+    public void display(int prevState) {
         //Set the GPS location fields.
+        if (prevState != GeoCrawler.STATE_MANUAL)
+            this.previousState = prevState;
+
         LocationData loc = app.getCollector().getLocation();
         if (loc != null) {
             latVal = Double.toString(loc.getLatitude());
@@ -118,7 +121,7 @@ public class ManualDisplay extends DisplayModule {
                     app.getCollector().setLocation(loc);
                 }
             }
-            app.handleNextState(GeoCrawler.STATE_MAP); //Go back to map!
+            app.handleNextState(previousState); //Go back to wherever we came from.
         } else
             System.out.println("Unknown command received in devel form.");
     }

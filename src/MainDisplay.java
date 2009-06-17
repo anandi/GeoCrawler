@@ -21,7 +21,7 @@ public class MainDisplay extends DisplayModule {
     private Command nextCommand; //Go to main app.
     private Command configCommand; //Go to configuration screen.
     private Command errorCommand; //Go to the last error screen.
-
+    private Command manualCommand; //Go to the manual location screen.
 
     public MainDisplay(GeoCrawler app) {
         super(app);
@@ -32,8 +32,10 @@ public class MainDisplay extends DisplayModule {
         nextCommand = new Command("My Location...", Command.SCREEN, 1);
         configCommand = new Command("Config", Command.SCREEN, 1);
         errorCommand = new Command("Last error...", Command.SCREEN, 1);
+        manualCommand = new Command("Manual location...", Command.SCREEN, 1);
         form.addCommand(this.getExitCommand());
         form.addCommand(errorCommand); //Always keep this handy.
+        form.addCommand(manualCommand); //The manual display needs to be accessible from the main.
         form.setCommandListener(this);
     }
 
@@ -87,6 +89,8 @@ public class MainDisplay extends DisplayModule {
             app.handleNextState(GeoCrawler.STATE_CONFIG);
         } else if (c == errorCommand) {
             app.handleNextState(GeoCrawler.STATE_ERROR);
+        } else if (c == manualCommand) {
+            app.handleNextState(GeoCrawler.STATE_MANUAL);
         } else {
             System.out.println("Unknown command received in main form.");
         }
