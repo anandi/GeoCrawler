@@ -31,14 +31,18 @@ public class ManualDisplay extends DisplayModule {
     private Form form;
     private Command doneCommand;
 
+    private int cell_input_flags;
+
     public ManualDisplay(GeoCrawler app) {
         super(app);
         latitude = new TextField("Latitude:", null, 60, TextField.DECIMAL);
         longitude = new TextField("Longitude:", null, 60, TextField.DECIMAL);
-        cellid = new TextField("Cell-ID:", null, 60, TextField.DECIMAL);
-        lac = new TextField("LAC:", null, 60, TextField.DECIMAL);
-        mcc = new TextField("MCC:", null, 60, TextField.DECIMAL);
-        mnc = new TextField("MNC:", null, 60, TextField.DECIMAL);
+
+        cell_input_flags = (GeoCrawlerKey.GEO_CRAWLER_DEVEL_MODE) ? TextField.DECIMAL : TextField.UNEDITABLE;
+        cellid = new TextField("Cell-ID:", null, 60, cell_input_flags);
+        lac = new TextField("LAC:", null, 60, cell_input_flags);
+        mcc = new TextField("MCC:", null, 60, cell_input_flags);
+        mnc = new TextField("MNC:", null, 60, cell_input_flags);
 
         doneCommand = new Command("Update", Command.SCREEN, 1);
         form = new Form("Developer page");
@@ -99,7 +103,10 @@ public class ManualDisplay extends DisplayModule {
             app.handleNextState(GeoCrawler.STATE_BEGIN);
         else if (c == this.doneCommand) {
             //First preference to lat-lon changes.
-            if (!(latitude.getString().equals(latVal) && longitude.getString().equals(lonVal))) {
+            String latStr = latitude.getString();
+            String lonStr = longitude.getString();
+            if (!(latStr.equals(latVal) && lonStr.equals(lonVal))
+                && (latStr.length() > 0) && (lonStr.length() > 0)) {
                 LocationData loc
                     = new LocationData(Double.parseDouble(latitude.getString()),
                                       Double.parseDouble(longitude.getString()),

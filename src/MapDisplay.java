@@ -1,10 +1,10 @@
 
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
-//import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Image;
-//import javax.microedition.lcdui.ImageItem;
 import java.io.IOException;
+import java.util.Hashtable;
+import java.util.Enumeration;
 
 /*
  * To change this template, choose Tools | Templates
@@ -30,9 +30,18 @@ public class MapDisplay extends DisplayModule {
     public static final int COMMAND_NORTH = 4;
     public static final int COMMAND_SOUTH = 5;
     public static final int COMMAND_SET_LOCATION = 6;
+    public static final int COMMAND_SWITCH_MODE = 7;
+
+    //The following controls the state of the map display
+    public static final int MODE_SIMPLE = 0; //Just show the map and overlays.
+    public static final int MODE_DISPLAY_CURRENT = 1; //Display the current location string.
+    public static final int MODE_ROAMING = 2; //Transfer focus to the map items.
+
+    public static final int MAX_MAP_ITEMS = 10; //Completely arbitrary.
 
     private MapCanvas canvas;
     private LocationData currentLoc;
+    private String currentAddress;
     private int width;
     private int height;
     private String widthString;
@@ -44,7 +53,6 @@ public class MapDisplay extends DisplayModule {
 
     private Command manualCommand; //Go to manual input screen.
     private Command configCommand; //Go to configuration screen.
-    private Command resetCommand; //Go back to current location.
 
     private int currentZoom; /* Please be aware that this is not a default zoom
                               * level offered by the map image service. This is
@@ -56,12 +64,15 @@ public class MapDisplay extends DisplayModule {
     private double shift_lat;
     private double shift_lon;
 
+    private int displayMode;
+
+    private Hashtable mapItemSources;
+
     public MapDisplay(GeoCrawler app) {
         super(app);
 
         manualCommand = new Command("Manual location...", Command.SCREEN, 1);
         configCommand = new Command("Config", Command.SCREEN, 1);
-        resetCommand = new Command("Current location", Command.SCREEN, 1);
 
         shift_lat = 0.0;
         shift_lon = 0.0;
@@ -87,6 +98,57 @@ public class MapDisplay extends DisplayModule {
         currentZoom = DEFAULT_ZOOM;
 
         currentLoc = null;
+        currentAddress = null; //Cannot be set without the help of Fire Eagle!
+
+        mapItemSources = new Hashtable();
+        displayMode = MODE_DISPLAY_CURRENT;
+    }
+
+    protected void setDisplayMode(int mode) {
+        boolean needsRepaint = false;
+        switch(mode) {
+            case MODE_SIMPLE:
+                displayMode = mode;
+                if (canvas != null) {
+                    canvas.clearDisplayText();
+                    needsRepaint = true;
+                }
+                break;
+            case MODE_DISPLAY_CURRENT:
+                displayMode = mode;
+                if (setCurrentAddressInDisplay())
+                    needsRepaint = true;
+                break;
+            case MODE_ROAMING:
+                if ((canvas != null) && canvas.hasMapItems()) {
+                    displayMode = mode;
+                    canvas.clearMapItemHighlight();
+                    setNextMapItemHighlight(true);
+                    needsRepaint = true;
+                }
+                break;
+            default:
+                break;
+        }
+
+        if (needsRepaint && (app.getDisplay().getCurrent() == canvas))
+            canvas.repaint(); //We have already checked that canvas is not null.
+    }
+
+    private boolean isCenteredOnCurrentLocation() {
+        if ((shift_lat == 0.0) && (shift_lon == 0.0))
+            return true;
+        return false;
+    }
+
+    private boolean setCurrentAddressInDisplay() {
+        if (isCenteredOnCurrentLocation() && (currentAddress != null)
+            && (canvas != null)) {
+            canvas.setDisplayText(currentAddress);
+            return true; //Success
+        }
+
+        return false; //Failure.
     }
 
     public void display(int prevState) {
@@ -98,11 +160,6 @@ public class MapDisplay extends DisplayModule {
             app.showError("Currently no location can be identified. If GPS is turned on, please wait for some time or check your configuration.", GeoCrawler.STATE_BEGIN);
             return;
         }
-
-        if ((shift_lat != 0) || (shift_lon != 0))
-            canvas.addCommand(resetCommand);
-        else
-            canvas.removeCommand(resetCommand);
 
         String url = imageURL();
         if (url == null) {
@@ -137,6 +194,16 @@ public class MapDisplay extends DisplayModule {
         }
         canvas.setImage(mapImage);
 
+        //Before we actually draw on the canvas, we need to set the string to be
+        //displayed if the mode warrants it.
+        if (displayMode != MODE_ROAMING)
+            canvas.clearDisplayText();
+        if (displayMode == MODE_DISPLAY_CURRENT)
+            setCurrentAddressInDisplay();
+
+        //Yes. I know that this is inefficient! Sigh!
+        updateMapItemsInCanvas();
+
         if (prevState != GeoCrawler.STATE_MAP)
             app.getDisplay().setCurrent(canvas);
         else
@@ -152,20 +219,41 @@ public class MapDisplay extends DisplayModule {
             app.handleNextState(GeoCrawler.STATE_MANUAL);
         else if (c == configCommand)
             app.handleNextState(GeoCrawler.STATE_CONFIG);
-        else if (c == resetCommand) {
-            shift_lat = 0.0;
-            shift_lon = 0.0;
-            currentZoom = MapDisplay.DEFAULT_ZOOM;
-            app.handleNextState(GeoCrawler.STATE_MAP);
-        } else
+        else
             System.out.println("Unknown command received in map form.");
     }
 
+    protected void setCurrentAddress() {
+        FireEagle fireEagle = app.getFireEagle();
+        if (fireEagle.getState() == FireEagle.STATE_AUTHORIZED) {
+            //See if we can get the current address string...
+            Hashtable params = new Hashtable(2);
+            params.put("lat", Double.toString(currentLoc.getLatitude()));
+            params.put("lon", Double.toString(currentLoc.getLongitude()));
+            String[] locations = fireEagle.lookupLocation(params);
+            if ((locations != null) && (locations.length == 1)) {
+                currentAddress = locations[0];
+            }
+        }
+    }
+
+    public String getCurrentAddress() {
+        return currentAddress;
+    }
+
     public void setLocation(LocationData loc) {
+        if ((currentLoc != null) && currentLoc.equals(loc)) {
+            if (currentAddress == null)
+                setCurrentAddress(); //Try to set the current address.
+            return;
+        }
         currentLoc = loc;
+        setCurrentAddress();
         shift_lat = 0.0;
         shift_lon = 0.0;
         currentZoom = MapDisplay.DEFAULT_ZOOM;
+        displayMode = MODE_DISPLAY_CURRENT;
+        refreshMapSources(true); //Force an update, since the location has changed.
     }
 
     /*Should really be using the YDN APIs here. There are some Y!Go code to
@@ -185,16 +273,20 @@ rmsguhan: this code might give the tile info
 rmsguhan: all this is in the Map API
 rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/go/skin/YGoMapControl.java?revision=1.116&view=markup
      */
+    private int getDisplayRadiusInKm() {
+        return (1 << currentZoom);
+    }
+
     private String imageURL() {
         //Using Yahoo REST MAP service!
         String url = MapDisplay.YAHOO_REST_MAP_URL;
         url = url.concat(GeoCrawlerKey.YAHOO_REST_MAP_KEY);
         url = url.concat("&latitude=").concat(Double.toString(getDisplayLat()));
         url = url.concat("&longitude=").concat(Double.toString(getDisplayLon()));
-        int radiusInKm = (1 << currentZoom);
-        System.err.println("Radius in KM: "+Integer.toString(radiusInKm));
+        int radiusInKm = getDisplayRadiusInKm();
+//        System.err.println("Radius in KM: "+Integer.toString(radiusInKm));
         double radiusInMiles = ((double)radiusInKm) * 0.621371192;
-        System.err.println("Radius in miles: "+Double.toString(radiusInMiles));
+//        System.err.println("Radius in miles: "+Double.toString(radiusInMiles));
         url = url.concat("&radius=").concat(Double.toString(radiusInMiles));
         url = url.concat("&image_width=").concat(widthString);
         url = url.concat("&image_height=").concat(heightString);
@@ -245,7 +337,42 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
         return imageURL;
     }
 
-    public void mapCommand(int command) {
+    protected boolean setNextMapItemHighlight(boolean forward) {
+        if ((displayMode != MapDisplay.MODE_ROAMING) || (canvas == null)
+            || !canvas.hasMapItems())
+            return false;
+        canvas.highlightNextMapItem(forward);
+        MapItem item = canvas.getHighlightedMapItem();
+        if (item != null)
+            canvas.setDisplayText(item.getShortDescription(canvas.getDescCharCount()));
+        return true;
+    }
+
+    private boolean handleRoamingModeMapCommand(int command) {
+        switch(command) {
+            case MapDisplay.COMMAND_EAST:
+            case MapDisplay.COMMAND_SOUTH:
+                this.setNextMapItemHighlight(true);
+                canvas.repaint();
+                return true; //Indicate that the command is handled.
+            case MapDisplay.COMMAND_WEST:
+            case MapDisplay.COMMAND_NORTH:
+                this.setNextMapItemHighlight(false);
+                canvas.repaint();
+                return true;
+            case MapDisplay.COMMAND_SET_LOCATION:
+                //We want more information on the currently highlighted item.
+                MapItem item = canvas.getHighlightedMapItem();
+                if (item != null)
+                    app.showError(item.getDescription(), GeoCrawler.STATE_MAP);
+                return true;
+            default:
+                break;
+        }
+        return false; //Command not handled.
+    }
+
+    private void handleDefaultMapCommand(int command) {
         double shift;
         double temp;
 
@@ -303,13 +430,61 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
                 app.handleNextState(GeoCrawler.STATE_MAP);
                 break;
             case MapDisplay.COMMAND_SET_LOCATION:
-                LocationData loc = new LocationData(getDisplayLat(), getDisplayLon(),
-                                                    500); /* FIXME */
-                app.getCollector().setLocation(loc);
-                app.handleNextState(GeoCrawler.STATE_MAP);
+                //The FIRE key can be used for lots of things...
+                if (!isCenteredOnCurrentLocation()) {
+                    //We want to update our location.
+                    LocationData loc = new LocationData(getDisplayLat(), getDisplayLon(),
+                                                        500); /* FIXME */
+                    app.getCollector().setLocation(loc);
+                    app.handleNextState(GeoCrawler.STATE_MAP);
+                } else if (displayMode == MODE_SIMPLE) {
+                    //We are not displaying the current location in the header.
+                    setDisplayMode(MODE_DISPLAY_CURRENT);
+                } else if (displayMode == MODE_DISPLAY_CURRENT) {
+                    //We are clicking on the current location despite showing
+                    //the current address...
+                    if (currentAddress != null) {
+                        app.showError("You are currently at: "+currentAddress,
+                                      GeoCrawler.STATE_MAP);
+                    }
+                }
+                break;
+            case MapDisplay.COMMAND_SWITCH_MODE:
+                switch (displayMode) {
+                    case MapDisplay.MODE_SIMPLE:
+                        if (isCenteredOnCurrentLocation())
+                            //We are already centered on current location.
+                            //Switch to ROAM mode.
+                            setDisplayMode(MapDisplay.MODE_ROAMING);
+                        else {
+                            shift_lat = 0.0;
+                            shift_lon = 0.0;
+                            app.handleNextState(GeoCrawler.STATE_MAP);
+                        }
+                        break;
+                    case MapDisplay.MODE_DISPLAY_CURRENT:
+                        setDisplayMode(MapDisplay.MODE_SIMPLE);
+                        break;
+                    case MapDisplay.MODE_ROAMING:
+                        setDisplayMode(MapDisplay.MODE_DISPLAY_CURRENT);
+                        break;
+                    default:
+                        break;
+                }
                 break;
             default:
         }
+    }
+
+    public void mapCommand(int command) {
+        if (displayMode == MapDisplay.MODE_ROAMING) {
+            System.err.println("Received a command in roaming mode");
+            if (handleRoamingModeMapCommand(command))
+                return;
+            System.err.println("Roaming mode command not handled");
+        }
+
+        this.handleDefaultMapCommand(command);
     }
 
     private double getShift() {
@@ -334,5 +509,76 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
         else if (lon < -180)
             lon = lon + 360;
         return lon;
+    }
+
+    public void registerMapItemSource(String sourceName, MapItemSource source) {
+        mapItemSources.put(sourceName, source);
+    }
+
+    private void updateMapItemsInCanvas() {
+        if ((canvas == null) || (mapItemSources == null))
+            return;
+
+        Enumeration sources = mapItemSources.elements();
+        int totalItems = 0;
+        while (sources.hasMoreElements()) {
+            MapItemSource source = (MapItemSource)sources.nextElement();
+            totalItems += source.getItemCount();
+        }
+
+        if (totalItems > MAX_MAP_ITEMS)
+            totalItems = MAX_MAP_ITEMS;
+
+        if (totalItems > 0) {
+            MapItem[] items = new MapItem[totalItems];
+            sources = mapItemSources.elements();
+            int index = 0;
+            while (sources.hasMoreElements() && (index < totalItems)) {
+                MapItemSource source = (MapItemSource)sources.nextElement();
+                int count = source.getItemCount();
+                for (int i = 0 ; (i < count) && (index < totalItems) ; i++) {
+                    MapItem item = source.getItem(i);
+                    item.x = this.getX(item.getLocation());
+                    item.y = this.getY(item.getLocation());
+                    items[index] = item;
+                    index++;
+                }
+            }
+
+            //OK got all the items that we can handle.
+            canvas.setMapItems(items);
+        } else {
+            canvas.setMapItems(null);
+        }
+    }
+
+    private void refreshMapSources(boolean force) {
+        Enumeration sources = mapItemSources.elements();
+        while (sources.hasMoreElements()) {
+            MapItemSource source = (MapItemSource)sources.nextElement();
+            if (force || source.needsRefresh()) {
+                source.runUpdate(currentLoc);
+            }
+        }
+    }
+    
+    //Get the X coordinate of the draw, assuming 0,0 is top-left
+    protected int getX(LocationData loc) {
+        LocationData curr = new LocationData(getDisplayLat(), getDisplayLon(), 0);
+        double dist = curr.getXDistance(loc);
+        //Get the number of pixels (+ve or -ve) from the center.
+        int x = (int)(((dist * width)/ (2 * getDisplayRadiusInKm())) + 0.5);
+        
+        return width/2 + x;
+    }
+
+    //Get the Y coordinate of the draw, assuming 0,0 is top-left
+    protected int getY(LocationData loc) {
+        LocationData curr = new LocationData(getDisplayLat(), getDisplayLon(), 0);
+        double dist = curr.getYDistance(loc);
+        //Get the number of pixels (+ve or -ve) from the center.
+        int y = (int)(((dist * height)/ (2 * getDisplayRadiusInKm())) + 0.5);
+
+        return height/2 - y;
     }
 }

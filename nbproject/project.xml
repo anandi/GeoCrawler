@@ -18,6 +18,17 @@
                     <property name="config.active"/>
                 </properties>
             </reference>
+            <reference>
+                <foreign-project>json</foreign-project>
+                <artifact-type>jar</artifact-type>
+                <script>${project.json}/build.xml</script>
+                <target>jar</target>
+                <clean-target>clean</clean-target>
+                <id>jar</id>
+                <properties>
+                    <property name="config.active"/>
+                </properties>
+            </reference>
         </references>
     </configuration>
 </project>

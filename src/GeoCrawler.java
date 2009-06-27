@@ -93,6 +93,7 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
             this.state = state;
             if (mapDisplay == null) {
                 mapDisplay = new MapDisplay(this);
+                mapDisplay.registerMapItemSource("Upcoming", new UpcomingEvents());
                 if (tempLoc != null) {
                     mapDisplay.setLocation(tempLoc);
                     tempLoc = null;
@@ -214,5 +215,11 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
             errorDisplay = new ErrorDisplay(this);
         }
         errorDisplay.setError(error);
+    }
+
+    public String getCurrentAddress() {
+        if (mapDisplay != null)
+            return mapDisplay.getCurrentAddress();
+        return null;
     }
 }

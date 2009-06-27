@@ -3,6 +3,7 @@
  * and open the template in the editor.
  */
 import java.util.Date;
+import akme.mobile.util.MathUtil;
 
 /**
  *
@@ -51,6 +52,10 @@ public class LocationData {
     //Code is taken from
     //http://www.codeproject.com/KB/cs/distancebetweenlocations.aspx
     public double getDistance(LocationData loc) {
+        return getDistance(loc.lat, loc.lon);
+    }
+
+    public double getDistance(double other_lat, double other_lon) {
         /*
             The Haversine formula according to Dr. Math.
             http://mathforum.org/library/drmath/view/51879.html
@@ -73,8 +78,8 @@ public class LocationData {
         double dDistance = Double.NaN;
         double dLat1InRad = Math.toRadians(lat);
         double dLong1InRad = Math.toRadians(lon);
-        double dLat2InRad = Math.toRadians(loc.lat);
-        double dLong2InRad = Math.toRadians(loc.lon);
+        double dLat2InRad = Math.toRadians(other_lat);
+        double dLong2InRad = Math.toRadians(other_lon);
 
         double dLongitude = dLong2InRad - dLong1InRad;
         double dLatitude = dLat2InRad - dLat1InRad;
@@ -87,7 +92,7 @@ public class LocationData {
                    (sin_dLongitude * sin_dLongitude);
 
         // Intermediate result c (great circle distance in Radians).
-        double c = 2.0 * LocationData.aTan2(Math.sqrt(a), Math.sqrt(1.0 - a));
+        double c = 2.0 * MathUtil.atan2(Math.sqrt(a), Math.sqrt(1.0 - a));
 
         // Distance.
         dDistance = LocationData.EARTH_RADIUS_IN_KM * c;
@@ -95,23 +100,76 @@ public class LocationData {
         return dDistance;
     }
 
-    //I wouldn't exactly vouch for this... but, I found it at:
-    //http://www.gamedev.net/community/forums/topic.asp?topic_id=441464 and it
-    //refers to http://dspguru.com/comp.dsp/tricks/alg/fxdatan2.htm
-    public static double aTan2(double y, double x) {
-	double coeff_1 = Math.PI / 4.0;
-	double coeff_2 = 3d * coeff_1;
-	double abs_y = Math.abs(y);
-	double angle;
-	if (x >= 0d) {
-		double r = (x - abs_y) / (x + abs_y);
-		angle = coeff_1 - coeff_1 * r;
-	} else {
-		double r = (x + abs_y) / (abs_y - x);
-		angle = coeff_2 - coeff_1 * r;
-	}
-	return y < 0d ? -angle : angle;
+    public double getXDistance(LocationData other) {
+        if (other.lon == this.lon)
+            return 0;
+        LocationData other1 = new LocationData(this.lat, other.lon, 0);
+        double distance = getDistance(other1);
+        //Now, get the sign!
+        if (this.lon > other.lon)
+            return -1 * distance; //X projection is negative.
+
+        return distance;
     }
 
+    public double getYDistance(LocationData other) {
+        if (other.lat == this.lat)
+            return 0;
+        LocationData other1 = new LocationData(other.lat, this.lon, 0);
+        double distance = getDistance(other1);
+        //Now, get the sign!
+        if (this.lat > other.lat)
+            return -1 * distance; //X projection is negative.
 
+        return distance;
+    }
+
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (!(obj instanceof LocationData))
+            return false;
+        LocationData other = (LocationData)obj;
+        if ((this.lat == other.lat) && (this.lon == other.lon))
+            return true;
+        return false;
+    }
+
+    /* This function needs the distance in KM and the angle in degrees with
+     * NORTH as 0-degree, increasing anti-clockwise. So, EAST is -90-degree
+     * or 270 degree.
+     * Algorithm source: http://williams.best.vwh.net/avform.htm#LL
+     */
+
+    public LocationData getLatLonAt(double distanceInKm, double angleInDegree) {
+        double greatCircleDistanceInRadian = distanceInKm/EARTH_RADIUS_IN_KM;
+        double angleInRadian = Math.toRadians(angleInDegree);
+        double latInRadian = Math.toRadians(lat);
+        double lonInRadian = Math.toRadians(lon);
+
+        double sinOfDistance = Math.sin(greatCircleDistanceInRadian); //reused
+
+        double newLatInRadian = MathUtil.asin((Math.sin(latInRadian) * Math.cos(greatCircleDistanceInRadian))
+                                           + (Math.cos(latInRadian) * sinOfDistance * Math.cos(angleInRadian)));
+        double newLonInRadian = lonInRadian;
+        double cosOfLat = Math.cos(newLatInRadian); //reused
+        if (cosOfLat != 0) {
+            //Not a pole
+            newLonInRadian = mod(lonInRadian
+                                      - MathUtil.asin(Math.sin(angleInRadian) * sinOfDistance / cosOfLat)
+                                      + Math.PI, 2 * Math.PI) - Math.PI;
+        }
+
+        return new LocationData(Math.toDegrees(newLatInRadian),
+                                                  Math.toDegrees(newLonInRadian),
+                                                  this.getErrorInMeters());
+    }
+
+    //Hopefully, this is correct implementation of a non-integral mod!
+    public static double mod(double x, double y) {
+        if ((y == 0) || (x == Double.NaN) || (y == Double.NaN))
+            return Double.NaN;
+        double q = Math.floor(x / y);
+        return x - (q * y);
+    }
 }

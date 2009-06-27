@@ -10,6 +10,9 @@ import net.oauth.j2me.OAuthServiceProviderException;
 import net.oauth.j2me.BadTokenStateException;
 import java.util.Hashtable;
 import java.io.IOException;
+import org.json.me.JSONObject;
+import org.json.me.JSONException;
+import org.json.me.JSONArray;
 
 /**
  *
@@ -28,8 +31,9 @@ public class FireEagle {
     public static final String OAUTH_HOST="https://fireeagle.yahooapis.com";
     public static final String REQUEST_TOKEN_URL="/oauth/request_token";
     public static final String ACCESS_TOKEN_URL="/oauth/access_token";
-    public static final String UPDATE_API_URL="/api/0.1/update";
+    public static final String UPDATE_API_URL="/api/0.1/update.json";
     public static final String QUERY_API_URL="/api/0.1/user";
+    public static final String LOOKUP_API_URL="/api/0.1/lookup.json";
 
     private String token;
     private String secret;
@@ -49,6 +53,18 @@ public class FireEagle {
             secret = configStore.getConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_SECRET);
             state = STATE_AUTHORIZED;
         } else {
+            if ((GeoCrawlerKey.GEO_CRAWLER_DEVEL_MODE)
+                && (GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN_STR != null)
+                && (GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN_SECRET_STR != null)) {
+                token = GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN_STR;
+                secret = GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN_SECRET_STR;
+                configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN, token);
+                configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_SECRET, secret);
+                state = STATE_AUTHORIZED;
+            }
+        }
+
+        if (token == null) {
             //Check if we have a saved request token.
             token = configStore.getConfigString(GeoCrawlerKey.FIRE_EAGLE_REQUEST_TOKEN);
             if (token != null) {
@@ -188,9 +204,10 @@ public class FireEagle {
             return false;
         AccessToken aToken = new AccessToken(token, secret);
         Consumer oConsumer = getOauthConsumer();
+        String response = "";
         try {
-            oConsumer.accessProtectedResource(OAUTH_HOST+UPDATE_API_URL,
-                                              aToken, params, "POST");
+            response = oConsumer.accessProtectedResource(OAUTH_HOST+UPDATE_API_URL,
+                                                        aToken, params, "POST");
         } catch (OAuthServiceProviderException ospe) {
             String feError = this.naiveParseErrorResponse(ospe.getHTTPResponse());
             System.err.println("FireEagle::updateLocation - Caught exception: "
@@ -203,9 +220,107 @@ public class FireEagle {
         }
 
         //Call succeeded.
+        try {
+            JSONObject parsedResponse = new JSONObject(response);
+            String status = parsedResponse.getString("stat");
+            if (!status.equals("ok"))
+                return false;
+//            System.err.println("Successfully updated Fire Eagle");
+        } catch (JSONException jx) {
+            System.err.println("Failed to parse JSON response: "+jx.getMessage());
+            return false; //Failed to parse JSON.
+        }
         return true;
     }
     
+    /*
+Lookup with a lat-lon: Should always be unambiguous!
+{
+ "count": 1,
+ "stat": "ok",
+ "locations": [
+  {
+   "name": "Cheluvadipalya Lane, Bangalore, Karnataka, India",
+   "woeid": 55924889,
+   "place_id": "7lymAgCcBJX6_TKGDw"
+  }
+ ],
+ "start": 0,
+ "total": 1,
+ "query": "lat=12.967&lon=77.567"
+}
+
+Lookup with a query string!
+{
+ "count": 22,
+ "stat": "ok",
+ "locations": [
+  {
+   "name": "London, England",
+   "woeid": 44418,
+   "place_id": ".2P4je.dBZgMyQ"
+  },
+  {
+   "name": "London, Ontario",
+   "woeid": 4063,
+   "place_id": "NRJjNLydAZo9"
+  },
+  ...
+  {
+   "name": "London, France",
+   "woeid": 20215476,
+   "place_id": "QXJP3KqbAZ6NZA.pqA"
+  }
+ ],
+ "start": 0,
+ "total": 22,
+ "query": "q=London"
+}
+     */
+    public String[] lookupLocation(Hashtable params) {
+        if (state != STATE_AUTHORIZED)
+            return null;
+        AccessToken aToken = new AccessToken(token, secret);
+        Consumer oConsumer = getOauthConsumer();
+        String response = "";
+        try {
+            response = oConsumer.accessProtectedResource(OAUTH_HOST+LOOKUP_API_URL,
+                                                        aToken, params, "POST");
+        } catch (OAuthServiceProviderException ospe) {
+            String feError = this.naiveParseErrorResponse(ospe.getHTTPResponse());
+            System.err.println("FireEagle::updateLocation - Caught exception: "
+                               + ospe.getHTTPResponse() + ": " + feError);
+            return null;
+        } catch (IOException ioe) {
+            System.err.println("FireEagle::updateLocation - Caught exception: "
+                               + ioe.getMessage());
+            return null;
+        }
+
+        //Call succeeded.
+        String[] locations = null;
+        try {
+            JSONObject parsedResponse = new JSONObject(response);
+            String status = parsedResponse.getString("stat");
+            if (!status.equals("ok"))
+                return null;
+            int count = parsedResponse.getInt("count");
+            System.err.println("Lookup query successful: Got "+Integer.toString(count)+" entries");
+            if (count == 0)
+                return null;
+            locations = new String[count];
+            JSONArray locArray = parsedResponse.getJSONArray("locations");
+            for (int i = 0 ; i < count ; i++) {
+                locations[i] = locArray.getJSONObject(i).getString("name");
+                System.err.println("Got location: "+locations[i]);
+            }
+        } catch (JSONException jx) {
+            System.err.println("Failed to parse JSON response: "+jx.getMessage());
+            return null; //Failed to parse JSON.
+        }
+        return locations;
+    }
+
     //The purpose of this class is not to query Fire Eagle for the current
     //location. Think about it. You have a mobile in your hand and a cell
     //connection. You need to draw a map of the things around you. How would

@@ -64,6 +64,11 @@ public class GPSBeacon extends LocationBeacon {
         double lat = 0;
         double lon = 0;
 
+        if (GeoCrawlerKey.GEO_CRAWLER_DEVEL_MODE) {
+            setLatLon(GeoCrawlerKey.GPS_DEFAULT_LAT, GeoCrawlerKey.GPS_DEFAULT_LON);
+            return true;
+        }
+
         if (lp == null)
             return false;
 
