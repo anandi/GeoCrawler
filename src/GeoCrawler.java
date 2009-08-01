@@ -21,11 +21,16 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     public static final int STATE_CONFIG = 5;
     public static final int STATE_ERROR = 6;
 
+    public static final int DETECTION_IN_PROGRESS = 0;
+    public static final int DETECTION_SUCCEEDED = 1;
+    public static final int DETECTION_FAILED = 2;
+
     LocationMaster locationCollector;
-    LocationData tempLoc; //Normally should be null, until the mapDisplay is ready.
+    private LocationData currentLocation; //Normally should be null, until the mapDisplay is ready.
                           //Pretty hacky and bad programming!!
 
     private int state;
+    private int detection_state;
 
     private Display display;
     private DisplayModule currentDisplay;
@@ -43,7 +48,7 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     public GeoCrawler() {
         display = Display.getDisplay(this);
         currentDisplay = null;
-        tempLoc = null;
+        currentLocation = null;
         try {
             configStore = new PersistentConfig("GeoCrawlerStore");
         } catch (RecordStoreException re) {
@@ -57,17 +62,16 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
         else
             fireEagleInstance = null;
 
-        locationCollector = new LocationMaster(configStore, this);
+        locationCollector = new LocationMaster(this);
 
-        initVars();
-        state = STATE_BEGIN;
-    }
-    
-    private void initVars() {
         mainDisplay = null;
         mapDisplay = null;
         fireEagleDisplay = null;
         manualDisplay = null;
+        configDisplay = null;
+        errorDisplay = null;
+        state = STATE_BEGIN;
+        detection_state = DETECTION_IN_PROGRESS;
     }
 
     public PersistentConfig getConfigStore() {
@@ -94,10 +98,8 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
             if (mapDisplay == null) {
                 mapDisplay = new MapDisplay(this);
                 mapDisplay.registerMapItemSource("Upcoming", new UpcomingEvents());
-                if (tempLoc != null) {
-                    mapDisplay.setLocation(tempLoc);
-                    tempLoc = null;
-                }
+                if (currentLocation != null)
+                    mapDisplay.notifyLocationUpdate();
             }
             currentDisplay = mapDisplay;
         } else if (state == STATE_FIREEAGLE) {
@@ -132,8 +134,13 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     }
 
     public void startApp() {
+        detection_state = DETECTION_IN_PROGRESS;
         locationCollector.start();
         handleNextState(STATE_BEGIN);
+    }
+
+    public int getDetectionState() {
+        return detection_state;
     }
 
     public void pauseApp() {
@@ -143,66 +150,64 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     }
 
     public void locationCallback(LocationData location) {
-        if (mapDisplay == null) {
-            tempLoc = location; //It will be given to mapDisplay when initialized!
-            return;
-        }
+        boolean autoSwitch = false;
+
+        if ((currentLocation == null) && (state == STATE_BEGIN)
+            && (fireEagleInstance != null)
+            && (fireEagleInstance.getState() == FireEagle.STATE_AUTHORIZED))
+            autoSwitch = true;
+        currentLocation = location;
+        detection_state = DETECTION_SUCCEEDED;
 
         //Update Fire Eagle if we are authorized...
-        if ((fireEagleInstance != null)
+        if (!location.updatedFireEagle && (fireEagleInstance != null)
             && (fireEagleInstance.getState() == FireEagle.STATE_AUTHORIZED)) {
+            String lat = Double.toString(location.getLatitude());
+            String lon = Double.toString(location.getLongitude());
+
             Hashtable params = new Hashtable(2);
-            params.put("lat", Double.toString(location.getLatitude()));
-            params.put("lon", Double.toString(location.getLongitude()));
+            params.put("lat", lat);
+            params.put("lon", lon);
             fireEagleInstance.updateLocation(params);
+
+            //See if we can get the current address string...
+            String[] locations = fireEagleInstance.lookupLocation(params);
+            if ((locations != null) && (locations.length == 1)) {
+                currentLocation.setAddress(locations[0]);
+            }
         }
 
-        mapDisplay.setLocation(location);
-        if (state == STATE_MAP)
-            mapDisplay.display(state); //Refresh
+        if (mapDisplay != null) {
+            mapDisplay.notifyLocationUpdate();
+            if (state == STATE_MAP)
+                mapDisplay.display(state); //Refresh
+        }
+
+        if (autoSwitch)
+            handleNextState(STATE_MAP);
+    }
+
+    public void detectFailed() {
+        detection_state = DETECTION_FAILED;
+        handleNextState(STATE_MAP); //Let us go to the map anyway.
     }
 
     public LocationMaster getCollector() {
         return locationCollector;
     }
 
-    public boolean handleConfigChange(String key, String newVal) {
-        boolean boolVal = false;
-        double dVal = 0;
-
-        String type = GeoCrawlerKey.getConfigType(key);
-        if (type.equals(GeoCrawlerKey.VALUE_TYPE_BOOLEAN)) {
-            if (newVal.equals("true"))
-                boolVal = true;
-            else if (newVal.equals("false"))
-                boolVal = false;
-            else
-                return false;
-        } else if (type.equals(GeoCrawlerKey.VALUE_TYPE_NUMERIC)) {
-            dVal = Double.parseDouble(newVal);
-        } else
-            return false;
-
-        if (key.equals(GeoCrawlerKey.CELL_ENABLED)) {
-            return locationCollector.CellEnable(boolVal);
-        } else if (key.equals(GeoCrawlerKey.GPS_ENABLED)) {
-            return locationCollector.GPSEnable(boolVal);
-        } else if (key.equals(GeoCrawlerKey.GPS_ERROR)) {
-            return locationCollector.setGPSErrorInMeters(dVal);
-        } else if (key.equals(GeoCrawlerKey.GPS_TIMEOUT)) {
-            return locationCollector.setGPSTimeoutInSeconds((int)(dVal + 0.5));
-        } else if (key.equals(GeoCrawlerKey.UPDATE_AUTO)) {
-            return locationCollector.setAutoRunMode(boolVal);
-        } else if (key.equals(GeoCrawlerKey.UPDATE_INTERVAL)) {
-            return locationCollector.setRunIntervalInMinutes((int)(dVal + 0.5));
-        } else
-            return false;
-    }
-
     public void showError(String error, int nextState) {
         if (error == null)
             return;
         setError(error);
+        state = nextState; //Spoof the return state for error display.
+        handleNextState(STATE_ERROR);
+    }
+
+    public void showInfo(String error, int nextState) {
+        if (error == null)
+            return;
+        setInfo(error);
         state = nextState; //Spoof the return state for error display.
         handleNextState(STATE_ERROR);
     }
@@ -214,12 +219,21 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
         if (errorDisplay == null) {
             errorDisplay = new ErrorDisplay(this);
         }
-        errorDisplay.setError(error);
+        errorDisplay.setMessage(error, ErrorDisplay.MSG_ERROR);
     }
 
-    public String getCurrentAddress() {
-        if (mapDisplay != null)
-            return mapDisplay.getCurrentAddress();
-        return null;
+    //Call to this method simply logs an info, which makes no sense to be
+    //public.
+    private void setInfo(String info) {
+        if (info == null)
+            return;
+        if (errorDisplay == null) {
+            errorDisplay = new ErrorDisplay(this);
+        }
+        errorDisplay.setMessage(info, ErrorDisplay.MSG_INFO);
+    }
+
+    public LocationData getCurrentLocation() {
+        return currentLocation;
     }
 }

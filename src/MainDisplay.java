@@ -59,7 +59,19 @@ public class MainDisplay extends DisplayModule {
         } else if (app.getFireEagle().getState() == FireEagle.STATE_REQUEST_TOKEN) {
             string.setText("You have not finished Fire Eagle authorization. To proceed, choose \"Fire Eagle...\" from menu");
         } else if (app.getFireEagle().getState() == FireEagle.STATE_AUTHORIZED) {
-            string.setText("Welcome back.");
+            String text = "You are currently successfully authorized with Fire Eagle";
+            LocationData loc = app.getCurrentLocation();
+            if (loc == null) {
+                if (app.getDetectionState() == GeoCrawler.DETECTION_IN_PROGRESS) {
+                    int timeout = app.getCollector().getGPSTimeoutInSeconds();
+                    text = text.concat("\n Trying for "+Integer.toString(timeout)+" seconds to get your location");
+                } else {
+                    text = text.concat("\n Currently unable to detect your location");
+                }
+            } else {
+                text = text.concat("\n You are currently at: "+loc.getAddress());
+            }
+            string.setText(text);
         } else {
             app.handleNextState(GeoCrawler.STATE_MAP);
             return;

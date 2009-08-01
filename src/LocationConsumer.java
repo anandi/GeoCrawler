@@ -10,4 +10,5 @@
 public interface LocationConsumer {
 
     public abstract void locationCallback(LocationData location);
+    public abstract void detectFailed();
 }

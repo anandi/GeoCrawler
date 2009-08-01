@@ -40,7 +40,10 @@ public class HTTPUtil {
             } else {
                 // Reading a Content-Length labeled payload
                 bytes = new byte[length];
-                in.read(bytes, 0, length);
+                DataInputStream dis = new DataInputStream(in);
+                dis.readFully(bytes, 0, length);
+                dis.close();
+                dis = null;
             }
             in.close();
             in = null;

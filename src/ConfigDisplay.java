@@ -8,6 +8,8 @@ import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.Item;
 //import javax.microedition.lcdui.StringItem;
 import java.util.Enumeration;
+import java.util.Vector;
+import java.util.Hashtable;
 
 /*
  * To change this template, choose Tools | Templates
@@ -20,8 +22,8 @@ import java.util.Enumeration;
  */
 public class ConfigDisplay extends DisplayModule {
     private Form form;
-    private String[] keyArray;
     private Command doneCommand;
+    private Hashtable displayToConfigMap;
 
     private static String CHOICE_YES = "Yes";
     private static String CHOICE_NO = "No";
@@ -30,44 +32,24 @@ public class ConfigDisplay extends DisplayModule {
         super(app);
 
         form = new Form("GeoCrawler Config");
-
-        Enumeration keys = GeoCrawlerKey.getConfigKeys();
-        keyArray = new String[GeoCrawlerKey.getKeyCount()];
-        int length = 0;
-        while (keys.hasMoreElements()) {
-            keyArray[length] = (String)keys.nextElement();
-            length++;
-        }
-
-        //Somehow, my IDE is not happy with java.util.Arrays.sort! I have to
-        //do my own sort. OK then, bubble sort is good enough!
-        sort(keyArray);
-
-        for (int i = 0 ; i < keyArray.length ; i++) {
-            String type = GeoCrawlerKey.getConfigType(keyArray[i]);
-            if (type.equals(GeoCrawlerKey.VALUE_TYPE_BOOLEAN)) {
-                //Handle boolean with Yes / No checkbox!
-                ChoiceGroup choices = new ChoiceGroup(keyArray[i], Choice.EXCLUSIVE);
-                int yesIdx = choices.append(CHOICE_YES, null);
-                int noIdx = choices.append(CHOICE_NO, null);
-                if (app.getConfigStore().getConfigString(keyArray[i]).equals("true"))
-                    choices.setSelectedIndex(yesIdx, true);
-                else
-                    choices.setSelectedIndex(noIdx, true);
-                form.append(choices);
-            } else if (type.equals(GeoCrawlerKey.VALUE_TYPE_NUMERIC)) {
-                //Handle numeric with textfield!
-                TextField field = new TextField(keyArray[i], null, 60, TextField.DECIMAL);
-                form.append(field);
-                field.setString(app.getConfigStore().getConfigString(keyArray[i]));
-            }
-        }
-
-        form.addCommand(getExitCommand());
+        form.addCommand(getBackCommand());
         doneCommand = new Command("Save", Command.SCREEN, 1);
         form.addCommand(doneCommand);
 
         form.setCommandListener(this);
+        displayToConfigMap = new Hashtable();
+    }
+
+    private String[] getConfigKeys() {
+        Vector keyVector = app.getConfigStore().getVisibleKeys();
+        String[] keyArr = new String[keyVector.size()];
+        Enumeration keys = keyVector.elements();
+        int index = 0;
+        while (keys.hasMoreElements()) {
+            keyArr[index] = (String)(keys.nextElement());
+            index++;
+        }
+        return keyArr;
     }
 
     private void sort(String[] arr) {
@@ -87,36 +69,98 @@ public class ConfigDisplay extends DisplayModule {
 
     public void display(int prevState) {
         previousState = prevState;
+        displayToConfigMap.clear();
+        form.deleteAll(); //Refresh.
+
+        String[] keyArray = this.getConfigKeys();
+        //Somehow, my IDE is not happy with java.util.Arrays.sort! I have to
+        //do my own sort. OK then, bubble sort is good enough!
+        sort(keyArray);
+        for (int i = 0 ; i < keyArray.length ; i++) {
+            ConfigItem configItem = app.getConfigStore().getVisibleConfigItem(keyArray[i]);
+            int type = configItem.getType();
+            int id = -1;
+            if (type == ConfigItem.TYPE_BOOLEAN) {
+                //Handle boolean with Yes / No checkbox!
+                ChoiceGroup choices = new ChoiceGroup(configItem.getDisplayString(), Choice.EXCLUSIVE);
+                int yesIdx = choices.append(CHOICE_YES, null);
+                int noIdx = choices.append(CHOICE_NO, null);
+                try {
+                    if (configItem.getBoolValue())
+                        choices.setSelectedIndex(yesIdx, true);
+                    else
+                        choices.setSelectedIndex(noIdx, true);
+                } catch (Exception e) {} //No exception will be thrown!
+                id = form.append(choices);
+            } else if ((type == ConfigItem.TYPE_INTEGER) || (type == ConfigItem.TYPE_FLOAT)) {
+                //Handle numeric with textfield!
+                TextField field = new TextField(configItem.getDisplayString(), null, 60, TextField.DECIMAL);
+                id = form.append(field);
+                field.setString(configItem.getValueAsString());
+            }
+            if (id != -1)
+                displayToConfigMap.put(new Integer(id), configItem);
+            //We should be throwing exception o/w!
+        }
+
         app.getDisplay().setCurrent(form);
     }
 
     public void commandAction(Command c, Displayable d) {
-        if (c == getExitCommand())
-            app.handleNextState(GeoCrawler.STATE_EXIT);
+        if (c == getBackCommand())
+            handleBackCommand();
         else if (c == getHomeCommand())
             app.handleNextState(GeoCrawler.STATE_BEGIN);
         else if (c == doneCommand) {
             for (int i = 0 ; i < form.size() ; i++) {
                 Item item = form.get(i);
-                String key = item.getLabel();
-                String type = GeoCrawlerKey.getConfigType(key);
-                if (type.equals(GeoCrawlerKey.VALUE_TYPE_BOOLEAN)) {
+                ConfigItem configItem = (ConfigItem)(displayToConfigMap.get(new Integer(i)));
+                if (configItem == null)
+                    continue;
+                String key = configItem.getKey();
+                int type = configItem.getType();
+                if (type == ConfigItem.TYPE_BOOLEAN) {
                     //Handle yes/no choice.
                     ChoiceGroup choices = (ChoiceGroup)item;
                     String choice = choices.getString(choices.getSelectedIndex());
-                    String currentVal = app.getConfigStore().getConfigString(key);
-                    if (choice.equals(ConfigDisplay.CHOICE_YES) && currentVal.equals("false"))
-                        app.handleConfigChange(key, "true");
-                    if (choice.equals(ConfigDisplay.CHOICE_NO) && currentVal.equals("true"))
-                        app.handleConfigChange(key, "false");
-                } else if (type.equals(GeoCrawlerKey.VALUE_TYPE_NUMERIC)) {
+                    boolean currValue = false;
+                    try {
+                        currValue = configItem.getBoolValue();
+                        if (choice.equals(ConfigDisplay.CHOICE_YES) && !currValue) {
+                            configItem.setValue(true);
+                            configItem.saved = false;
+                        }
+                        if (choice.equals(ConfigDisplay.CHOICE_NO) && currValue) {
+                            configItem.setValue(false);
+                            configItem.saved = false;
+                        }
+                    } catch (Exception e) {} //Won't be thrown.
+                } else if (type == ConfigItem.TYPE_INTEGER) {
                     //Handle numbers.
                     TextField field = (TextField)item;
                     String val = field.getString();
-                    String currentVal = app.getConfigStore().getConfigString(key);
-                    if (!val.equals(currentVal)) {
-                        app.handleConfigChange(key, val);
-                    }
+                    int currVal = 0;
+                    int newVal = currVal;
+                    try {
+                        newVal = Integer.parseInt(val);
+                        if (currVal != newVal) {
+                            configItem.setValue(newVal);
+                            configItem.saved = false;
+                        }
+                    } catch (Exception e) {} //Assume not changed.
+                } else if (type == ConfigItem.TYPE_FLOAT) {
+                    //Handle numbers.
+                    TextField field = (TextField)item;
+                    String val = field.getString();
+                    double currVal = 0;
+                    double newVal = currVal;
+                    try {
+                        newVal = Double.parseDouble(val);
+                        if (currVal != newVal) {
+                            configItem.setValue(newVal);
+                            configItem.saved = false;
+                        }
+                    } catch (Exception e) {} //Assume not changed.
                 }
             }
             app.handleNextState(previousState); //Go back to previous display.

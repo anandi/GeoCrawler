@@ -20,7 +20,7 @@ public abstract class MapItemSource {
     //Override this method to allow for periodic refresh, even if the current
     //location has not changed.
     public boolean needsRefresh() {
-        return false;
+        return (items == null) ? true : false;
     }
 
     //Execute the actual update.
@@ -38,6 +38,12 @@ public abstract class MapItemSource {
         if (index >= items.length)
             return null;
         return items[index];
+    }
+
+    public void invalidateItems() {
+        //This will be called when the current location changes and the items
+        //become obsolete.
+        items = null;
     }
 
     //We shall add more methods here as we proceed.

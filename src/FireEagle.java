@@ -32,13 +32,18 @@ public class FireEagle {
     public static final String REQUEST_TOKEN_URL="/oauth/request_token";
     public static final String ACCESS_TOKEN_URL="/oauth/access_token";
     public static final String UPDATE_API_URL="/api/0.1/update.json";
-    public static final String QUERY_API_URL="/api/0.1/user";
+    public static final String QUERY_API_URL="/api/0.1/user.json";
     public static final String LOOKUP_API_URL="/api/0.1/lookup.json";
 
     private String token;
     private String secret;
 
     private int state;
+
+    private static final String ACCESS_TOKEN_KEY = "FE.AccessToken";
+    private static final String REQUEST_TOKEN_KEY = "FE.RequestToken";
+    private static final String ACCESS_SECRET_KEY = "FE.AccessTokenSecret";
+    private static final String REQUEST_SECRET_KEY = "FE.RequestTokenSecret";
 
     public FireEagle(String consumerKey, String consumerSecret,
                      PersistentConfig pc) {
@@ -48,9 +53,9 @@ public class FireEagle {
         state = STATE_NOTOKEN;
 
         //First check whether we already have a access token.
-        token = configStore.getConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN);
+        token = configStore.getConfigString(ACCESS_TOKEN_KEY);
         if (token != null) {
-            secret = configStore.getConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_SECRET);
+            secret = configStore.getConfigString(ACCESS_SECRET_KEY);
             state = STATE_AUTHORIZED;
         } else {
             if ((GeoCrawlerKey.GEO_CRAWLER_DEVEL_MODE)
@@ -58,17 +63,17 @@ public class FireEagle {
                 && (GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN_SECRET_STR != null)) {
                 token = GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN_STR;
                 secret = GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN_SECRET_STR;
-                configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN, token);
-                configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_SECRET, secret);
+                configStore.setConfigString(ACCESS_TOKEN_KEY, token);
+                configStore.setConfigString(ACCESS_SECRET_KEY, secret);
                 state = STATE_AUTHORIZED;
             }
         }
 
         if (token == null) {
             //Check if we have a saved request token.
-            token = configStore.getConfigString(GeoCrawlerKey.FIRE_EAGLE_REQUEST_TOKEN);
+            token = configStore.getConfigString(REQUEST_TOKEN_KEY);
             if (token != null) {
-                secret = configStore.getConfigString(GeoCrawlerKey.FIRE_EAGLE_REQUEST_SECRET);
+                secret = configStore.getConfigString(REQUEST_SECRET_KEY);
                 state = STATE_REQUEST_TOKEN;
             }
         }
@@ -107,8 +112,8 @@ public class FireEagle {
 
         token = rToken.getToken();
         secret = rToken.getSecret();
-        if (!(configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_REQUEST_TOKEN, token)
-             && configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_REQUEST_SECRET, secret)))
+        if (!(configStore.setConfigString(REQUEST_TOKEN_KEY, token)
+             && configStore.setConfigString(REQUEST_SECRET_KEY, secret)))
             return false;
 
         state = STATE_REQUEST_TOKEN;
@@ -116,8 +121,8 @@ public class FireEagle {
     }
 
     private void deleteRequestToken(int state) {
-        configStore.deleteConfigString(GeoCrawlerKey.FIRE_EAGLE_REQUEST_TOKEN);
-        configStore.deleteConfigString(GeoCrawlerKey.FIRE_EAGLE_REQUEST_SECRET);
+        configStore.deleteConfigString(REQUEST_TOKEN_KEY);
+        configStore.deleteConfigString(REQUEST_SECRET_KEY);
         this.state = state;
     }
 
@@ -150,16 +155,16 @@ public class FireEagle {
 
         token = aToken.getToken();
         secret = aToken.getSecret();
-        if (!(configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN, token)
-             && configStore.setConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_SECRET, secret)))
+        if (!(configStore.setConfigString(ACCESS_TOKEN_KEY, token)
+             && configStore.setConfigString(ACCESS_SECRET_KEY, secret)))
             return false;
         deleteRequestToken(STATE_AUTHORIZED);
         return true;
     }
     
     private void deleteAccessToken() {
-        configStore.deleteConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_TOKEN);
-        configStore.deleteConfigString(GeoCrawlerKey.FIRE_EAGLE_ACCESS_SECRET);
+        configStore.deleteConfigString(ACCESS_TOKEN_KEY);
+        configStore.deleteConfigString(ACCESS_SECRET_KEY);
         this.state = STATE_NOTOKEN;
     }
 
@@ -312,7 +317,7 @@ Lookup with a query string!
             JSONArray locArray = parsedResponse.getJSONArray("locations");
             for (int i = 0 ; i < count ; i++) {
                 locations[i] = locArray.getJSONObject(i).getString("name");
-                System.err.println("Got location: "+locations[i]);
+//                System.err.println("Got location: "+locations[i]);
             }
         } catch (JSONException jx) {
             System.err.println("Failed to parse JSON response: "+jx.getMessage());
@@ -321,12 +326,98 @@ Lookup with a query string!
         return locations;
     }
 
-    //The purpose of this class is not to query Fire Eagle for the current
-    //location. Think about it. You have a mobile in your hand and a cell
-    //connection. You need to draw a map of the things around you. How would
-    //Fire Eagle know where you are if your mobile does not tell that to Fire
-    //Eagle? In which case, your mobile already knows where it is... and you
-    //are at hand to correct manually any error. There is absolutely no
-    //reason to get your location from Fire Eagle.
-    //Um... you do have a cell network connection. Don't you?
+/*
+ {
+   "stat":"ok",
+   "user":{
+     "readable":true,
+     "writable":true,
+     "located_at":"2009-07-08T10:41:38-07:00",
+     "hierarchy_string":"23424775|2344916|29375222|9807",
+     "timezone":"America\/Vancouver, Canada",
+     "location_hierarchy":[
+       {
+         "geometry":{
+           "type":"Polygon",
+           "coordinates":[
+             [
+               [-123.2649536133,49.1318588257],
+               [-122.9857177734,49.1318588257],
+               [-122.9857177734,49.3521881104],
+               [-123.2649536133,49.3521881104],
+               [-123.2649536133,49.1318588257]
+             ]
+           ],
+           "bbox":[
+             [-123.2649536133,49.1318588257],
+             [-122.9857177734,49.3521881104]
+           ]
+         },
+         "level":3,
+         "located_at":"2009-07-08T10:41:38-07:00",
+         "name":"Vancouver, British Columbia",
+         "woeid":9807,
+         "place_id":"63v7zaqQCZxX",
+         "best_guess":true,
+         "id":301551191,
+         "label":null,
+         "level_name":"city",
+         "normal_name":"Vancouver"
+       },
+       ...
+     ],
+     "token":"XXXXXXXXXX"
+   }
+ }
+ */
+    public LocationData getLocation() {
+        if (state != STATE_AUTHORIZED)
+            return null;
+        AccessToken aToken = new AccessToken(token, secret);
+        Consumer oConsumer = getOauthConsumer();
+        String response = "";
+        try {
+            response = oConsumer.accessProtectedResource(OAUTH_HOST+QUERY_API_URL,
+                                                        aToken, null, "GET");
+        } catch (OAuthServiceProviderException ospe) {
+            String feError = this.naiveParseErrorResponse(ospe.getHTTPResponse());
+            System.err.println("FireEagle::updateLocation - Caught exception: "
+                               + ospe.getHTTPResponse() + ": " + feError);
+            return null;
+        } catch (IOException ioe) {
+            System.err.println("FireEagle::updateLocation - Caught exception: "
+                               + ioe.getMessage());
+            return null;
+        }
+
+        try {
+            JSONObject parsedResponse = new JSONObject(response);
+            String status = parsedResponse.getString("stat");
+            if (!status.equals("ok"))
+                return null;
+            JSONArray locations = parsedResponse.getJSONObject("user").getJSONArray("location_hierarchy");
+            if (locations.length() == 0)
+                return null;
+            //Get only the first one. This will be the innermost one.
+            JSONObject geometry = locations.getJSONObject(0).getJSONObject("geometry");
+            if ("Point".equals(geometry.getString("type"))) {
+                //We got a point location!
+                JSONArray coords = geometry.getJSONArray("coordinates");
+                return new LocationData(Double.parseDouble(coords.getString(1)),
+                                        Double.parseDouble(coords.getString(0)),
+                                        0);
+            } else {
+                //We got a bounding box!
+                JSONArray bbox = geometry.getJSONArray("bbox");
+                double neLon = Double.parseDouble(bbox.getJSONArray(0).getString(0));
+                double neLat = Double.parseDouble(bbox.getJSONArray(0).getString(1));
+                double swLon = Double.parseDouble(bbox.getJSONArray(0).getString(0));
+                double swLat = Double.parseDouble(bbox.getJSONArray(0).getString(1));
+                return new LocationData((neLat+swLat)/2, (neLon+swLon)/2, 0);
+            }
+        } catch (JSONException jx) {
+            System.err.println("Failed to parse JSON response: "+jx.getMessage());
+        }
+        return null; //Failed at some stage.
+    }
 }

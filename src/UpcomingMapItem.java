@@ -3,8 +3,7 @@
  * and open the template in the editor.
  */
 import java.util.Hashtable;
-import net.oauth.j2me.OAuthParameterEncoder;
-import java.io.IOException;
+import java.util.Vector;
 import org.json.me.JSONObject;
 import org.json.me.JSONException;
 
@@ -56,7 +55,6 @@ import org.json.me.JSONException;
    "utc_end":"2009-07-05 05:00:00 UTC"
  }*/
 public class UpcomingMapItem extends MapItem {
-    private static String YAHOO_GEO_CODER_URL="http://local.yahooapis.com/MapsService/V1/geocode?appid=";
     private static String[] UPCOMING_DISPLAYABLES = {
         "name", "start_date", "end_date", "start_time", "end_time", "url",
         "venue_name", "venue_address", "ticket_url", "description"
@@ -131,89 +129,45 @@ public class UpcomingMapItem extends MapItem {
     }
 
     public void resolveAddr(LocationData observer) {
-        OAuthParameterEncoder encoder = new OAuthParameterEncoder();
-        String url = UpcomingMapItem.YAHOO_GEO_CODER_URL + GeoCrawlerKey.YAHOO_REST_MAP_KEY;
-
+        Hashtable geocoderParams = new Hashtable();
         //Get the street.
         String tmp = (String)info.get("venue_address");
         if ((tmp == null) || (tmp.length() == 0))
             return; //We do not have to resolve where the street is not clear.
-        url = url.concat("&street=").concat(encoder.encode(tmp));
+        geocoderParams.put("street", tmp);
 
         //Get the city.
         tmp = (String)info.get("venue_city");
         if ((tmp == null) || (tmp.length() == 0))
             return; //Street without a parent city is ambiguous.
-        url = url.concat("&city=").concat(encoder.encode(tmp));
+        geocoderParams.put("city", tmp);
 
 
         //Get the state.
         tmp = (String)info.get("venue_state_name");
         if ((tmp != null) && (tmp.length() > 0))
-            url = url.concat("&state=").concat(encoder.encode(tmp));
+            geocoderParams.put("state", tmp);
 
         //Get the zip.
         tmp = (String)info.get("venue_zip");
         if ((tmp != null) && (tmp.length() > 0))
-            url = url.concat("&zip=").concat(encoder.encode(tmp));
+            geocoderParams.put("zip", tmp);
 
-        //Now make the query and get back the data...
-        String response = null;
-        try {
-            response = HTTPUtil.httpGetRequest(url);
-        } catch (IOException iox) {
-            return;
-        }
-        if (response == null)
+        Vector locations = GeoCoder.addressToLocation(geocoderParams);
+        if (locations == null)
             return;
 
-        //Response looks something like:
-        /*<ResultSet xsi:schemaLocation="urn:yahoo:maps http://api.local.yahoo.com/MapsService/V1/GeocodeResponse.xsd">
-             <Result precision="zip">
-                 <Latitude>12.933220</Latitude>
-                 <Longitude>77.621910</Longitude>
-                 <Address/>
-                 <City>Koramangala, Bangalore, Karnataka</City>
-                 <State>India</State>
-                 <Zip/>
-                 <Country>IN</Country>
-             </Result>
-         </ResultSet>*/
-        //Since SAX fails miserably on the simulator, I use naive parse! This is
-        //messy. The best I can say is: trust me!
         double bestLat = getLat();
         double bestLon = getLon();
-        double distance = Double.NaN;
-        int start = response.indexOf("<Latitude>", 0);
-        while (start != -1) {
-            start += 10; //strlen("<Latitude>");
-            int end = response.indexOf("</Latitude>", start);
-            if (end == -1)
-                break;
-            String latStr = response.substring(start, end);
-            start = response.indexOf("<Longitude>", end + 11);
-            if (start == -1)
-                break;
-            start += 11;
-            end = response.indexOf("</Longitude>", start);
-            if (end == -1)
-                break;
-            String lonStr = response.substring(start, end);
-
-            //Check if these are parsable!
-            try {
-                double lat = Double.parseDouble(latStr);
-                double lon = Double.parseDouble(lonStr);
-                double tmpDistance = observer.getDistance(lat, lon);
-                if ((distance == Double.NaN) || (tmpDistance < distance)) {
-                    bestLat = lat;
-                    bestLon = lon;
-                    distance = tmpDistance;
-                }
-            } catch (Exception e) {
-                break;
+        double distance = 0;
+        for (int i = 0 ; i < locations.size() ; i++) {
+            LocationData location = (LocationData)locations.elementAt(i);
+            double tmpDistance = observer.getDistance(location);
+            if ((i == 0) || (tmpDistance < distance)) {
+                bestLat = location.getLatitude();
+                bestLon = location.getLongitude();
+                distance = tmpDistance;
             }
-            start = response.indexOf("<Latitude>", end + 12);
         }
 
         this.updateLocation(bestLat, bestLon);

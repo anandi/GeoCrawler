@@ -157,6 +157,8 @@ public class MapCanvas extends Canvas {
     }
 
     private boolean isMapItemVisible(int index) {
+        if ((items == null) || (items.length <= index))
+            return false;
         if (((items[index].x >= 0) && (items[index].x < width))
             && ((items[index].y >= 0) && (items[index].y < height)))
             return true;

@@ -5,6 +5,7 @@ import javax.microedition.lcdui.Image;
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Enumeration;
+import java.util.Vector;
 
 /*
  * To change this template, choose Tools | Templates
@@ -40,8 +41,6 @@ public class MapDisplay extends DisplayModule {
     public static final int MAX_MAP_ITEMS = 10; //Completely arbitrary.
 
     private MapCanvas canvas;
-    private LocationData currentLoc;
-    private String currentAddress;
     private int width;
     private int height;
     private String widthString;
@@ -52,7 +51,6 @@ public class MapDisplay extends DisplayModule {
                                     // the XML containing the image URL!
 
     private Command manualCommand; //Go to manual input screen.
-    private Command configCommand; //Go to configuration screen.
 
     private int currentZoom; /* Please be aware that this is not a default zoom
                               * level offered by the map image service. This is
@@ -67,21 +65,19 @@ public class MapDisplay extends DisplayModule {
     private int displayMode;
 
     private Hashtable mapItemSources;
+    private MapItemUpdater itemUpdaterThread;
 
     public MapDisplay(GeoCrawler app) {
         super(app);
 
         manualCommand = new Command("Manual location...", Command.SCREEN, 1);
-        configCommand = new Command("Config", Command.SCREEN, 1);
 
         shift_lat = 0.0;
         shift_lon = 0.0;
 
         canvas = new MapCanvas(this);
-        canvas.addCommand(this.getExitCommand());
         canvas.addCommand(manualCommand);
-        canvas.addCommand(configCommand);
-        canvas.addCommand(this.getHomeCommand());
+        canvas.addCommand(this.getBackCommand());
         canvas.setCommandListener(this);
 
         //Till we use Canvas and do getWidth and getHeight!
@@ -97,10 +93,8 @@ public class MapDisplay extends DisplayModule {
 
         currentZoom = DEFAULT_ZOOM;
 
-        currentLoc = null;
-        currentAddress = null; //Cannot be set without the help of Fire Eagle!
-
         mapItemSources = new Hashtable();
+        itemUpdaterThread = null;
         displayMode = MODE_DISPLAY_CURRENT;
     }
 
@@ -142,9 +136,10 @@ public class MapDisplay extends DisplayModule {
     }
 
     private boolean setCurrentAddressInDisplay() {
-        if (isCenteredOnCurrentLocation() && (currentAddress != null)
+        String address = app.getCurrentLocation().getAddress();
+        if (isCenteredOnCurrentLocation() && (address != null)
             && (canvas != null)) {
-            canvas.setDisplayText(currentAddress);
+            canvas.setDisplayText(address);
             return true; //Success
         }
 
@@ -155,6 +150,7 @@ public class MapDisplay extends DisplayModule {
         if (prevState != GeoCrawler.STATE_MAP)
             previousState = prevState;
 
+        LocationData currentLoc = app.getCurrentLocation();
         if (currentLoc == null) {
             //Map not yet ready to be drawn.
             app.showError("Currently no location can be identified. If GPS is turned on, please wait for some time or check your configuration.", GeoCrawler.STATE_BEGIN);
@@ -211,49 +207,29 @@ public class MapDisplay extends DisplayModule {
     }
 
     public void commandAction(Command c, Displayable d) {
-        if (c == getExitCommand())
-            app.handleNextState(GeoCrawler.STATE_EXIT);
-        else if (c == getHomeCommand())
+        if (c == getBackCommand())
             app.handleNextState(GeoCrawler.STATE_BEGIN);
         else if (c == manualCommand)
             app.handleNextState(GeoCrawler.STATE_MANUAL);
-        else if (c == configCommand)
-            app.handleNextState(GeoCrawler.STATE_CONFIG);
         else
             System.out.println("Unknown command received in map form.");
     }
 
-    protected void setCurrentAddress() {
-        FireEagle fireEagle = app.getFireEagle();
-        if (fireEagle.getState() == FireEagle.STATE_AUTHORIZED) {
-            //See if we can get the current address string...
-            Hashtable params = new Hashtable(2);
-            params.put("lat", Double.toString(currentLoc.getLatitude()));
-            params.put("lon", Double.toString(currentLoc.getLongitude()));
-            String[] locations = fireEagle.lookupLocation(params);
-            if ((locations != null) && (locations.length == 1)) {
-                currentAddress = locations[0];
-            }
-        }
-    }
-
-    public String getCurrentAddress() {
-        return currentAddress;
-    }
-
-    public void setLocation(LocationData loc) {
-        if ((currentLoc != null) && currentLoc.equals(loc)) {
-            if (currentAddress == null)
-                setCurrentAddress(); //Try to set the current address.
-            return;
-        }
-        currentLoc = loc;
-        setCurrentAddress();
+    public void notifyLocationUpdate() {
         shift_lat = 0.0;
         shift_lon = 0.0;
         currentZoom = MapDisplay.DEFAULT_ZOOM;
         displayMode = MODE_DISPLAY_CURRENT;
-        refreshMapSources(true); //Force an update, since the location has changed.
+        if (itemUpdaterThread != null) {
+            //A background thread is running to update map items. Stop it!
+            itemUpdaterThread.stop();
+            itemUpdaterThread = null;
+        }
+
+        //Kick off the background updater...
+        itemUpdaterThread = new MapItemUpdater(mapItemSources, this,
+                                               app.getCurrentLocation());
+        itemUpdaterThread.start();
     }
 
     /*Should really be using the YDN APIs here. There are some Y!Go code to
@@ -364,7 +340,7 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
                 //We want more information on the currently highlighted item.
                 MapItem item = canvas.getHighlightedMapItem();
                 if (item != null)
-                    app.showError(item.getDescription(), GeoCrawler.STATE_MAP);
+                    app.showInfo(item.getDescription(), GeoCrawler.STATE_MAP);
                 return true;
             default:
                 break;
@@ -443,8 +419,9 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
                 } else if (displayMode == MODE_DISPLAY_CURRENT) {
                     //We are clicking on the current location despite showing
                     //the current address...
+                    String currentAddress = app.getCurrentLocation().getAddress();
                     if (currentAddress != null) {
-                        app.showError("You are currently at: "+currentAddress,
+                        app.showInfo("You are currently at: "+currentAddress,
                                       GeoCrawler.STATE_MAP);
                     }
                 }
@@ -478,10 +455,8 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
 
     public void mapCommand(int command) {
         if (displayMode == MapDisplay.MODE_ROAMING) {
-            System.err.println("Received a command in roaming mode");
             if (handleRoamingModeMapCommand(command))
                 return;
-            System.err.println("Roaming mode command not handled");
         }
 
         this.handleDefaultMapCommand(command);
@@ -494,7 +469,7 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
     }
 
     private double getDisplayLat() {
-        double lat = currentLoc.getLatitude() + shift_lat;
+        double lat = app.getCurrentLocation().getLatitude() + shift_lat;
         if (lat > 90)
             lat = 90;
         else if (lat < -90)
@@ -503,7 +478,7 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
     }
 
     private double getDisplayLon() {
-        double lon = currentLoc.getLongitude() + shift_lon;
+        double lon = app.getCurrentLocation().getLongitude() + shift_lon;
         if (lon > 180)
             lon = lon - 360;
         else if (lon < -180)
@@ -515,7 +490,7 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
         mapItemSources.put(sourceName, source);
     }
 
-    private void updateMapItemsInCanvas() {
+    private synchronized void updateMapItemsInCanvas() {
         if ((canvas == null) || (mapItemSources == null))
             return;
 
@@ -530,35 +505,32 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
             totalItems = MAX_MAP_ITEMS;
 
         if (totalItems > 0) {
-            MapItem[] items = new MapItem[totalItems];
             sources = mapItemSources.elements();
             int index = 0;
+            Vector availableItems = new Vector();
             while (sources.hasMoreElements() && (index < totalItems)) {
                 MapItemSource source = (MapItemSource)sources.nextElement();
                 int count = source.getItemCount();
                 for (int i = 0 ; (i < count) && (index < totalItems) ; i++) {
                     MapItem item = source.getItem(i);
-                    item.x = this.getX(item.getLocation());
-                    item.y = this.getY(item.getLocation());
-                    items[index] = item;
+                    if (item == null) //Could be race condition, or even o/w
+                        continue;
+                    item.x = getX(item.getLocation());
+                    item.y = getY(item.getLocation());
+                    availableItems.addElement(item);
                     index++;
                 }
             }
-
-            //OK got all the items that we can handle.
-            canvas.setMapItems(items);
+            if (index == 0)
+                canvas.setMapItems(null);
+            else {
+                MapItem[] items = new MapItem[index];
+                for (int i = 0 ; i < index ; i++)
+                    items[i] = (MapItem)availableItems.elementAt(i);
+                canvas.setMapItems(items);
+            }
         } else {
             canvas.setMapItems(null);
-        }
-    }
-
-    private void refreshMapSources(boolean force) {
-        Enumeration sources = mapItemSources.elements();
-        while (sources.hasMoreElements()) {
-            MapItemSource source = (MapItemSource)sources.nextElement();
-            if (force || source.needsRefresh()) {
-                source.runUpdate(currentLoc);
-            }
         }
     }
     
@@ -580,5 +552,31 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
         int y = (int)(((dist * height)/ (2 * getDisplayRadiusInKm())) + 0.5);
 
         return height/2 - y;
+    }
+
+    public synchronized void mapItemUpdaterCallback(boolean more,
+                                                    MapItemUpdater thread) {
+        LocationData loc = thread.getLocation();
+        if (loc != app.getCurrentLocation()) {
+            //Thread is obsolete. Wonder why it did not die. If this is same as
+            //the current updater thread, then set current thread to null and
+            //tell the updater thread to buzz off...
+            thread.stop();
+            if ((itemUpdaterThread != null)
+                && (itemUpdaterThread.getLocation() == loc)) {
+                //We don't really have a method to check for equality of the
+                //locations, but this is more correct...
+                this.itemUpdaterThread = null;
+            }
+        }
+
+        updateMapItemsInCanvas();
+        if ((canvas != null) && (app.getDisplay().getCurrent() == canvas))
+            canvas.repaint(); //We have already checked that canvas is not null.
+
+        if (!more) {
+            thread.stop();
+            itemUpdaterThread = null;
+        }
     }
 }

@@ -7,156 +7,149 @@
  *
  * @author anandi
  */
-public class LocationMaster extends Thread {
+public class LocationMaster extends Thread implements ConfigListener {
+    private static final String GPS_ENABLED = "GPS.enabled";
+    private static final String GPS_ERROR = "GPS.error"; //In meters.
+    private static final String GPS_TIMEOUT = "GPS.timeout"; //In seconds.
+    private static final String CELL_ENABLED = "CELL.enabled";
+    private static final String UPDATE_INTERVAL = "LM.minutes";
+    private static final String UPDATE_AUTO = "LM.run";
+
     private int lock; //Protects location.
     private LocationData location;
 
-    private PersistentConfig configStore;
     private boolean autoRun;
     private boolean initialized;
     private long interval; //Pause interval in milliseconds.
     private boolean running;
 
-    LocationConsumer consumer;
+    private LocationConsumer consumer;
+    private FireEagle fireEagle;
     private double gpsErrorInMeters;
     private int gpsTimeoutInSeconds;
     GPSBeacon gps;
     CellIDBeacon cell;
 
-    public LocationMaster(PersistentConfig pc, LocationConsumer lc) {
+    public LocationMaster(GeoCrawler app) {
         lock = 0;
         location = null;
-        consumer = lc;
-        configStore = pc;
+        consumer = app;
 
         initialized = false; //Indicate that we are not ready to run yet.
 
-        String s;
-        s = configStore.getConfigString(GeoCrawlerKey.GPS_ENABLED);
+        gps = null;
         boolean useGPS = true;
-        if (s == null)
-            configStore.setConfigString(GeoCrawlerKey.GPS_ENABLED, "true");
-        else
-            useGPS = (s.equals("true")) ? true : false;
+        ConfigItem gpsItem = new ConfigItem(GPS_ENABLED,
+                                            "Enable GPS signal detection",
+                                            true, useGPS, this);
+        PersistentConfig pc = app.getConfigStore();
+        pc.registerConfigItem(gpsItem);
+        fireEagle = app.getFireEagle();
+        try {
+            useGPS = gpsItem.getBoolValue();
+        } catch (Exception e) {} //Will not occur.
 
         gpsErrorInMeters = 500;
+        pc.registerConfigItem(new ConfigItem(GPS_ERROR,
+                                             "Allowed error radius for GPS detection in meters (min 10)",
+                                             true, gpsErrorInMeters, this));
         gpsTimeoutInSeconds = 60;
-        s = configStore.getConfigString(GeoCrawlerKey.GPS_ERROR);
-        if (s == null)
-            setGPSErrorInMeters(gpsErrorInMeters);
-        else
-            gpsErrorInMeters = Double.parseDouble(s);
-        s = configStore.getConfigString(GeoCrawlerKey.GPS_TIMEOUT);
-        if (s == null)
-            this.setGPSTimeoutInSeconds(gpsTimeoutInSeconds);
-        else
-            gpsTimeoutInSeconds = Integer.parseInt(s);
+        pc.registerConfigItem(new ConfigItem(GPS_TIMEOUT,
+                                             "Maximum seconds for a GPS detection timeout",
+                                             true, gpsTimeoutInSeconds, this));
 
-        if (useGPS)
+        if (useGPS && (gps == null))
             gps = new GPSBeacon(gpsErrorInMeters, gpsTimeoutInSeconds);
-        else
-            gps = null;
 
-        s = configStore.getConfigString(GeoCrawlerKey.CELL_ENABLED);
+        cell = null;
         boolean useCell = true;
-        if (s == null)
-            configStore.setConfigString(GeoCrawlerKey.CELL_ENABLED, "true");
-        else
-            useCell = (s.equals("true")) ? true : false;
+        ConfigItem cellItem = new ConfigItem(CELL_ENABLED,
+                                             "Enable cell tower location detection",
+                                             true, useCell, this);
+        pc.registerConfigItem(cellItem);
+        try {
+            useCell = cellItem.getBoolValue();
+        } catch (Exception e) {}
 
-        if (useCell)
+        if (useCell && (cell == null))
             cell = new CellIDBeacon();
-        else
-            cell = null;
 
-        s = configStore.getConfigString(GeoCrawlerKey.UPDATE_INTERVAL);
-        if (s == null)
-            setRunIntervalInMinutes(5);
-        else
-            interval = Integer.parseInt(s) * 60 * 1000;
+        int updateIntervalInMinutes = 5;
+        setRunIntervalInMinutes(updateIntervalInMinutes);
+        pc.registerConfigItem(new ConfigItem(UPDATE_INTERVAL,
+                                             "Interval in minutes between location detection",
+                                             true, updateIntervalInMinutes, this));
 
-        s = configStore.getConfigString(GeoCrawlerKey.UPDATE_AUTO);
         running = false;
-        if (s == null)
-            this.setAutoRunMode(true); //Careful! This kicks off the run!!
-        else
-            autoRun = (s.equals("true")) ? true : false;
+        boolean autoUpdate = true;
+        ConfigItem autoUpdateItem = new ConfigItem(UPDATE_AUTO,
+                                             "Enable automatic location update",
+                                                   true, autoUpdate, this);
+        pc.registerConfigItem(autoUpdateItem);
+        try {
+            autoUpdate = autoUpdateItem.getBoolValue();
+        } catch (Exception e) {}
+        if (autoUpdate)
+            setAutoRunMode(true); //Careful! This kicks off the run!!
 
         initialized = true;
     }
 
-    public boolean GPSEnable(boolean val) {
-        if (!configStore.setConfigString(GeoCrawlerKey.GPS_ENABLED, (val) ? "true" : "false"))
-            return false;
+    private void GPSEnable(boolean val) {
         if (val && (gps == null))
             gps = new GPSBeacon(gpsErrorInMeters, gpsTimeoutInSeconds);
         else if (!(val || (gps == null)))
             gps = null; //Has race condition!
-        return true;
     }
 
     public boolean GPSEnabled() {
         return (gps == null) ? false : true;
     }
 
-    public boolean CellEnable(boolean val) {
-        if (!configStore.setConfigString(GeoCrawlerKey.CELL_ENABLED, (val) ? "true" : "false"))
-            return false;
+    private void CellEnable(boolean val) {
         if (val && (cell == null))
             cell = new CellIDBeacon();
         else if (!(val || (cell == null)))
             cell = null; //Has race condition!
-        return true;
     }
 
     public boolean CellEnabled() {
         return (cell == null) ? false : true;
     }
 
-    public boolean setGPSErrorInMeters(double error) {
+    private void setGPSErrorInMeters(double error) {
         if (error <= 10)
-            return false;
-        if (!configStore.setConfigString(GeoCrawlerKey.GPS_ERROR, Double.toString(error)))
-            return false;
+            return; //Doesn't take any effect! We need to propagate this back.
         if (gps != null)
             gps.setErrorInMeters(error);
-        return true;
     }
 
     public double getGPSErrorInMeters() {
         return gpsErrorInMeters;
     }
 
-    public boolean setGPSTimeoutInSeconds(int seconds) {
+    private void setGPSTimeoutInSeconds(int seconds) {
         if (seconds <= 0)
-            return false;
-        if (!configStore.setConfigString(GeoCrawlerKey.GPS_TIMEOUT, Integer.toString(seconds)))
-            return false;
+            return;
         if (gps != null)
             gps.setTimeoutInSeconds(seconds);
-        return true;
     }
 
     public int getGPSTimeoutInSeconds() {
         return gpsTimeoutInSeconds;
     }
 
-    public boolean setRunIntervalInMinutes(int mins) {
+    private void setRunIntervalInMinutes(int mins) {
         if (mins < 1)
-            return false;
-        if (!configStore.setConfigString(GeoCrawlerKey.UPDATE_INTERVAL, Integer.toString(mins)))
-            return false;
+            return;
         interval = mins * 60 * 1000; //Same value in milliseconds.
-        return true;
     }
 
     public int getRunIntervalInMinutes() {
         return (int)(interval / (60 * 1000));
     }
 
-    public boolean setAutoRunMode(boolean val) {
-        if (!configStore.setConfigString(GeoCrawlerKey.UPDATE_AUTO, (val) ? "true" : "false"))
-            return false;
+    private boolean setAutoRunMode(boolean val) {
         autoRun = val;
         if (autoRun && initialized)
             this.run(); //Start the run.
@@ -247,6 +240,13 @@ public class LocationMaster extends Thread {
             }
         }
 
+        //If we are here, then we could not find an update through the
+        //beacons. Let us see if we can get something from Fire Eagle...
+        if ((fireEagle != null) && (fireEagle.getState() == FireEagle.STATE_AUTHORIZED)) {
+            LocationData loc = fireEagle.getLocation();
+            return loc;
+        }
+
         return null;
     }
 
@@ -285,17 +285,46 @@ public class LocationMaster extends Thread {
             return; //Already running.
 
         running = true;
-        System.err.println("LocationMaster thread running...");
+
+        //Atleast, try to get the Fire Eagle location if possible...
+        if ((fireEagle != null) && (fireEagle.getState() == FireEagle.STATE_AUTHORIZED)) {
+            LocationData loc = fireEagle.getLocation();
+            if (loc != null)
+                setLocation(loc);
+        }
+
         while (autoRun && running) {
-            LocationData loc = this.getUpdate();
+            LocationData loc = getUpdate();
             if ((loc != null) && checkUpdate(loc))
                 setLocation(loc);
+
+            if (location == null)
+                consumer.detectFailed(); //Send a message saying we have no location.
 
             try {
                 Thread.sleep(interval);
             } catch (InterruptedException ie) {} //Do nothing!. It is OK to run
                                                  //unscheduled once in a while.
         }
-        System.err.println("LocationMaster thread stopped...");
+
+        if (location == null)
+            consumer.detectFailed(); //Send a message saying we have no location.
+    }
+
+    public void notifyChanged(ConfigItem item) {
+        try {
+        if (item.getKey().equals(GPS_ENABLED))
+            this.GPSEnable(item.getBoolValue());
+        else if (item.getKey().equals(GPS_ERROR))
+            this.setGPSErrorInMeters(item.getDoubleValue());
+        else if (item.getKey().equals(GPS_TIMEOUT))
+            this.setGPSTimeoutInSeconds(item.getIntValue());
+        else if (item.getKey().equals(CELL_ENABLED))
+            this.CellEnable(item.getBoolValue());
+        else if (item.getKey().equals(UPDATE_INTERVAL))
+            this.setRunIntervalInMinutes(item.getIntValue());
+        else if (item.getKey().equals(UPDATE_AUTO))
+            this.setAutoRunMode(item.getBoolValue());
+        } catch (Exception e) {} //Shouldn't be thrown.
     }
 }

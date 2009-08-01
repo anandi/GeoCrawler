@@ -15,13 +15,28 @@ public class LocationData {
     private double lat;
     private double lon;
     private double errInMeters;
+    private String address;
     Date timeStamp;
+
+    //Design-wise, this is the stupidest thing that we can do, but,
+    //unfortunately, the FireEagle API does not return a precise lat-lon pair on
+    //an update, so we really cannot construct and remember a precise location
+    //from a string update. A call to lookup, ofcourse, is equally unhelpful!
+    //Why not user API? There is no guarantee that the update has happened inline,
+    //which means that the user API call just after a update could still be
+    //returning an old location! Also, there is no guarantee that the update
+    //will succeed. Did anybody ever see it fail???
+    //So, the best we can do is to tie this structure to Fire Eagle (subclass??)
+    //so that atleast the flag can be set! Bad design!
+    public boolean updatedFireEagle;
 
     LocationData(double lat, double lon, double error) {
         this.lat = lat;
         this.lon = lon;
         this.errInMeters = error;
         timeStamp = new Date();
+        address = null;
+        updatedFireEagle = false;
     }
 
     public double getLatitude() {
@@ -171,5 +186,14 @@ public class LocationData {
             return Double.NaN;
         double q = Math.floor(x / y);
         return x - (q * y);
+    }
+
+    public void setAddress(String addr) {
+        if (addr != null)
+            address = addr;
+    }
+
+    public String getAddress() {
+        return address;
     }
 }
