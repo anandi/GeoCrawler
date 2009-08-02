@@ -9,6 +9,13 @@ out as you use it.
 
 I have tested this on a Nokia N78. It works.
 
+Screenshots:
+============
+Most of the screenshots from the 'screenshots' directory are from an older
+version. I did a major UI scrub based on feedback I got for the existing
+ones. Although the features are mostly same, the menu items are a little
+different. I will fix that soon.
+
 Features:
 =========
 - GPS sensing
@@ -18,10 +25,13 @@ Features:
   - through map scrolling
   - through lat-lon input
   - thorough cell id input (uber-geeky: meant only for developers!)
+  - through text strings
 
 - Yahoo! Fire Eagle integration
   You can update your location to Yahoo! Fire Eagle location broker
 service automatically. See http://fireeagle.yahoo.net for details.
+  Also downloads your Fire Eagle location when the app starts up, till
+it can detect your location from other beacons like GPS or Cell tower.
 
 - Map integration from Yahoo! maps. The map navigation keys are not
 documented in the app (lazy me!)... here they are:
@@ -34,12 +44,34 @@ documented in the app (lazy me!)... here they are:
   - Joystick fire : Set your current location to the center of the map
                     currently displayed.
 
+- Upcoming integration. Automatically background queries the 'best in
+place' Upcoming events from http://upcoming.yahoo.com for your current
+location. This data is plotted as small icons on the map you see. There
+is a 'roaming' mode (see later for keys) where you can scroll through
+the icons marked on your display (the default black of the icon changes
+to red). The keys are:
+  - '#' : Zoom in
+  - '*' : Zoom out
+  - Joystick left : Previous item
+  - Joystick right: Next item
+  - Joystick up   : Previous item
+  - Joystick down : Next item
+  - Joystick fire : See details for the event currently highlighted.
+
+- Changing modes: Use the 'C' key to switch modes. I consider there to
+be three modes of operation, though it seems more like 2...
+  - Map mode (2 subcases)
+    - With your location summary text painted on the map
+    - Without your location summary text painted.
+  - Roaming mode
+  Some keys (like the '#' and the '*' work the same in all modes.
+
 - Many configurations to figure out and fiddle with when you are in the 
 mood for complex problems to solve.
 
 Bugs:
 =====
-1. When the manual location is updated, the Fire Eagle is not updated.
+  Too many to list here, but it overall works.
 
 Status:
 =======
@@ -53,9 +85,7 @@ address resolution capabilities.
 Developers:
 ===========
 If you want to use the source, you will also need the OAuth JAR from
-http://github.com/simonpk/j2me-oauth/tree/master. However, there may
-need to be some changes which I did and is not up on Simon's github
-yet. If so, please contact me for a patch file.
+http://github.com/fireeagle/j2me-oauth/tree/master.
 
 You will also need the following stuff:
 1. JSON parsing library from meapplication-developers available at:
@@ -64,6 +94,9 @@ https://meapplicationdevelopers.dev.java.net/svn/meapplicationdevelopers
 2. The MathUtil functions not normally provided in J2ME. Courtesy of
 akmemobile. The SVN repository is available at:
 https://akmemobile.dev.jav.net/svn/akmemobile
+
+Finally, you need to get your own keys. See GeoCrawlerKey.java for the
+listing of the keys needed for all functionalities.
 
 License:
 ========
