@@ -159,6 +159,7 @@ public class PersistentConfig {
             return true; //Nothing to delete.
         try {
             rs.deleteRecord(rid.intValue());
+            recordIdMap.remove(key);
         } catch (RecordStoreException re) {
             return false;
         }

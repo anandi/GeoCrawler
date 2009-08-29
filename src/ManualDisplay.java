@@ -205,7 +205,18 @@ public class ManualDisplay extends DisplayModule {
             String newAddr = address.getString();
             Hashtable params = new Hashtable(1);
             params.put("q", newAddr);
-            String[] locations = app.getFireEagle().lookupLocation(params);
+            FireEagle fe = app.getFireEagle();
+            if (fe.getState() != FireEagle.STATE_AUTHORIZED) {
+                address.setString(oldAddress);
+                app.showError("You have not authorized Fire Eagle to do address lookup", GeoCrawler.STATE_MANUAL);
+                return;
+            }
+            String[] locations = fe.lookupLocation(params);
+            if (locations == null) {
+                address.setString(oldAddress);
+                app.showError("Fire Eagle could not resolve this address", GeoCrawler.STATE_MANUAL);
+                return;
+            }
             if (locations.length == 0) {
                 //Address did not resolve.
                 app.showError("Fire Eagle did not understand this address.", GeoCrawler.STATE_MANUAL);

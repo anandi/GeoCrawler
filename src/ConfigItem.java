@@ -93,10 +93,10 @@ public class ConfigItem {
         boolean curr_val = ((Boolean)value).booleanValue();
         if (curr_val != val) {
             saved = false;
+            value = new Boolean(val);
             if (owner != null)
                 owner.notifyChanged(this);
         }
-        value = new Boolean(val);
     }
 
     public int getIntValue() throws Exception {
@@ -111,10 +111,10 @@ public class ConfigItem {
         int curr_val = ((Integer)value).intValue();
         if (curr_val != val) {
             saved = false;
+            value = new Integer(val);
             if (owner != null)
                 owner.notifyChanged(this);
         }
-        value = new Integer(val);
     }
 
     public double getDoubleValue() throws Exception {
@@ -129,10 +129,10 @@ public class ConfigItem {
         double curr_val = ((Double)value).doubleValue();
         if (curr_val != val) {
             saved = false;
+            value = new Double(val);
             if (owner != null)
                 owner.notifyChanged(this);
         }
-        value = new Double(val);
     }
 
     public void setValueFromString(String val) throws Exception {

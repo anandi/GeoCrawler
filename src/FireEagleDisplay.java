@@ -80,6 +80,7 @@ public class FireEagleDisplay extends DisplayModule {
                 form.append(info);
                 code.setText(token);
                 form.append(code);
+                verifier.setString(""); //Always initialize.
                 try {
                     app.platformRequest(GeoCrawlerKey.FIRE_EAGLE_AUTH_URL);
                 } catch (ConnectionNotFoundException cnfe) {

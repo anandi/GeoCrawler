@@ -9,6 +9,26 @@ out as you use it.
 
 I have tested this on a Nokia N78. It works.
 
+Pre-requisites:
+===============
+If you are planning to use this, please note that your phone needs to
+support the following:
+
+1. J2ME (Java Apps) [For geeks: MIDP 2.0, CLDC 1.1]
+
+2. JSR-172 (this is integral to GPS lookup and the app is likely to crash
+or not install if this is missing. I am working on making the app function
+even if this is not present)
+
+3. Web access (Wireless, GPRS, whatever). There are some issues with the OS
+continuously asking for authorization to make a Web access from an app. I
+don't know how to turn this off, though I know that phones (like Nokia N95,
+have configuration settings that will do a one-time authorization).
+
+4. HTTPS support. This is needed only for the Fire Eagle component right
+now. My tests with Blackberry shows that while the above three pre-requisites
+are satisfied, this is not. I have to still see if it works with a Blackberry.
+
 Screenshots:
 ============
 Most of the screenshots from the 'screenshots' directory are from an older
@@ -19,13 +39,14 @@ different. I will fix that soon.
 Features:
 =========
 - GPS sensing
-- Cell tower sensing (where known)
+- Cell tower sensing (I think this is not working. Atleast not on N78)
+- IP lookup as a fallback. This is a replacement for Cell tower.
 
 - Manual location setting
   - through map scrolling
   - through lat-lon input
   - thorough cell id input (uber-geeky: meant only for developers!)
-  - through text strings
+  - through text strings (requires Fire Eagle authorization)
 
 - Yahoo! Fire Eagle integration
   You can update your location to Yahoo! Fire Eagle location broker

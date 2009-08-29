@@ -29,6 +29,7 @@ public class LocationMaster extends Thread implements ConfigListener {
     private int gpsTimeoutInSeconds;
     GPSBeacon gps;
     CellIDBeacon cell;
+    IPBeacon ip;
 
     public LocationMaster(GeoCrawler app) {
         lock = 0;
@@ -36,6 +37,9 @@ public class LocationMaster extends Thread implements ConfigListener {
         consumer = app;
 
         initialized = false; //Indicate that we are not ready to run yet.
+
+        //Always use IP beacon...
+        ip = new IPBeacon();
 
         gps = null;
         boolean useGPS = true;
@@ -237,6 +241,14 @@ public class LocationMaster extends Thread implements ConfigListener {
                                     cell.getLongitude(), cell.getErrorInMeter());
                     return loc;
                 }
+            }
+        }
+
+        if (ip != null) {
+            if (ip.update()) {
+                LocationData loc = new LocationData(ip.getLatitude(),
+                                       ip.getLongitude(), ip.getErrorInMeter());
+                return loc;
             }
         }
 

@@ -1,11 +1,2 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project-private xmlns="http://www.netbeans.org/ns/project-private/1">
-    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/1">
-        <file>file:/C:/Documents%20and%20Settings/anandi/My%20Documents/Gits/GeoCrawler/src/ConfigItem.java</file>
-        <file>file:/C:/Documents%20and%20Settings/anandi/My%20Documents/Gits/GeoCrawler/src/ConfigListener.java</file>
-        <file>file:/C:/Documents%20and%20Settings/anandi/My%20Documents/Gits/GeoCrawler/src/GeoCrawler.java</file>
-        <file>file:/C:/Documents%20and%20Settings/anandi/My%20Documents/Gits/GeoCrawler/src/GeoCrawlerKey.java</file>
-        <file>file:/C:/Documents%20and%20Settings/anandi/My%20Documents/Gits/GeoCrawler/src/LocationMaster.java</file>
-        <file>file:/C:/Documents%20and%20Settings/anandi/My%20Documents/Gits/GeoCrawler/src/PersistentConfig.java</file>
-    </open-files>
-</project-private>
+<project-private xmlns="http://www.netbeans.org/ns/project-private/1"/>
