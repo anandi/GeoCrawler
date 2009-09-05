@@ -9,6 +9,10 @@ out as you use it.
 
 I have tested this on a Nokia N78. It works.
 
+Current Version:
+================
+0.1.0 Alpha.
+
 Pre-requisites:
 ===============
 If you are planning to use this, please note that your phone needs to
