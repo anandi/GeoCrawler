@@ -17,9 +17,12 @@ public class IPBeacon extends LocationBeacon {
         this.errorInMeter = 6000; //Should actually be meaningfully set by resolve!
     }
 
-    public boolean initialze() {
-        //Nothing to initialize.
-        return true;
+    public boolean resolve() {
+        return resolveWithIpInfoDB();
+    }
+
+    public boolean update() {
+        return resolveWithIpInfoDB();
     }
 
     /* Expected response is like:
@@ -35,7 +38,7 @@ public class IPBeacon extends LocationBeacon {
        "Longitude" : "77.5833",
        "Gmtoffset" : "5.5",
        "Dstoffset" : "5.5" } */
-    public boolean update() {
+    protected boolean resolveWithIpInfoDB() {
         //Access the web service and get back a JSON response...
         String response = null;
         try {

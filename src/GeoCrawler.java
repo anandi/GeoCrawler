@@ -12,6 +12,7 @@ import java.util.Hashtable;
  * @author anandi
  */
 public class GeoCrawler extends MIDlet implements LocationConsumer {
+    public static final String VERSION = "0.1.0";
 
     public static final int STATE_EXIT = 0;
     public static final int STATE_BEGIN = 1;
@@ -20,6 +21,7 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     public static final int STATE_MANUAL = 4;
     public static final int STATE_CONFIG = 5;
     public static final int STATE_ERROR = 6;
+    public static final int STATE_SEARCH = 7;
 
     public static final int DETECTION_IN_PROGRESS = 0;
     public static final int DETECTION_SUCCEEDED = 1;
@@ -41,6 +43,9 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
     private FireEagleDisplay fireEagleDisplay;
     private ConfigDisplay configDisplay;
     private ErrorDisplay errorDisplay;
+    private SearchInputDisplay searchInputDisplay;
+
+    private SearchResults searchResults; //Actually an engine that fetches search results.
 
     private PersistentConfig configStore;
     private FireEagle fireEagleInstance;
@@ -70,6 +75,10 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
         manualDisplay = null;
         configDisplay = null;
         errorDisplay = null;
+        searchInputDisplay = null;
+
+        searchResults = null;
+
         state = STATE_BEGIN;
         detection_state = DETECTION_IN_PROGRESS;
     }
@@ -86,6 +95,10 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
         return display;
     }
 
+    public MapDisplay getMapDisplay() {
+        return mapDisplay;
+    }
+
     public void handleNextState(int state) {
         int currentState = this.state;
         if (state == STATE_BEGIN) {
@@ -97,7 +110,9 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
             this.state = state;
             if (mapDisplay == null) {
                 mapDisplay = new MapDisplay(this);
-                mapDisplay.registerMapItemSource("Upcoming", new UpcomingEvents());
+                mapDisplay.registerMapItemSource(new UpcomingEvents());
+                searchResults = new SearchResults();
+                mapDisplay.registerMapItemSource(searchResults);
                 if (currentLocation != null)
                     mapDisplay.notifyLocationUpdate();
             }
@@ -122,6 +137,11 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
                 errorDisplay = new ErrorDisplay(this);
             this.state = state;
             currentDisplay = errorDisplay;
+        } else if (state == STATE_SEARCH) {
+            if (searchInputDisplay == null)
+                searchInputDisplay = new SearchInputDisplay(this, searchResults);
+            this.state = state;
+            currentDisplay = searchInputDisplay;
         } else if (state == STATE_EXIT) {
             if ((locationCollector != null) && locationCollector.isRunning())
                 locationCollector.stop();
@@ -185,6 +205,8 @@ public class GeoCrawler extends MIDlet implements LocationConsumer {
 
         if (autoSwitch)
             handleNextState(STATE_MAP);
+        else if (state == STATE_BEGIN)
+            handleNextState(STATE_BEGIN);
     }
 
     public void detectFailed() {

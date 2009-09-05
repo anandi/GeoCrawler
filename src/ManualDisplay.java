@@ -49,8 +49,6 @@ public class ManualDisplay extends DisplayModule {
     private Form form;
     private Command doneCommand;
 
-    private int cell_input_flags;
-
     private int state;
 
     public ManualDisplay(GeoCrawler app) {
@@ -62,15 +60,15 @@ public class ManualDisplay extends DisplayModule {
         address_notice = null;
         oldAddress = null;
         additionalIndex = -1;
+        int input_flags = (GeoCrawlerKey.GEO_CRAWLER_DEVEL_MODE) ? TextField.DECIMAL : TextField.UNEDITABLE;
 
-        latitude = new TextField("Latitude:", null, 60, TextField.DECIMAL);
-        longitude = new TextField("Longitude:", null, 60, TextField.DECIMAL);
+        latitude = new TextField("Latitude:", null, 60, input_flags);
+        longitude = new TextField("Longitude:", null, 60, input_flags);
 
-        cell_input_flags = (GeoCrawlerKey.GEO_CRAWLER_DEVEL_MODE) ? TextField.DECIMAL : TextField.UNEDITABLE;
-        cellid = new TextField("Cell-ID:", null, 60, cell_input_flags);
-        lac = new TextField("LAC:", null, 60, cell_input_flags);
-        mcc = new TextField("MCC:", null, 60, cell_input_flags);
-        mnc = new TextField("MNC:", null, 60, cell_input_flags);
+        cellid = new TextField("Cell-ID:", null, 60, input_flags);
+        lac = new TextField("LAC:", null, 60, input_flags);
+        mcc = new TextField("MCC:", null, 60, input_flags);
+        mnc = new TextField("MNC:", null, 60, input_flags);
 
         form = new Form("Manual Update");
         addressIndex = form.append(address);
@@ -137,12 +135,12 @@ public class ManualDisplay extends DisplayModule {
 
         //Cell ID is enabled. Set the cell ID fields if we can get them.
         if (app.getCollector().CellEnabled()) {
-            CellIDBeacon cell = new CellIDBeacon();
+            LocationBeacon cell = LocationBeacon.instanceOf("CellIDBeacon");
             if (cell.update()) {
-                cellidVal = cell.getCellIdString();
-                lacVal = cell.getLACString();
-                mccVal = cell.getMCCString();
-                mncVal = cell.getMNCString();
+                cellidVal = (String)cell.getProperty("cellid");
+                lacVal = (String)cell.getProperty("lac");
+                mccVal = (String)cell.getProperty("mcc");
+                mncVal = (String)cell.getProperty("mnc");
             } else {
                 cellidVal = "";
                 lacVal = "";
@@ -187,6 +185,7 @@ public class ManualDisplay extends DisplayModule {
                 LocationData location = (LocationData)locations.elementAt(0);
                 location.setAddress(address);
                 location.updatedFireEagle = true; //Do not update again.
+                location.source = "Manual";
                 app.getCollector().setLocation(location);
             } else
                 app.setError("Temporary failure to update display due to geocoding problem.");
@@ -274,20 +273,23 @@ public class ManualDisplay extends DisplayModule {
                     = new LocationData(Double.parseDouble(latitude.getString()),
                                       Double.parseDouble(longitude.getString()),
                                       500.00);
+                loc.source = "Manual";
                 app.getCollector().setLocation(loc);
             } else if (!(cellidVal.equals(cellid.getString())
                          && lacVal.equals(lac.getString())
                          && mccVal.equals(mcc.getString())
                          && mncVal.equals(mnc.getString()))) {
-                CellIDBeacon cell = new CellIDBeacon();
-                cell.setCellIdString(cellid.getString());
-                cell.setLACString(lac.getString());
-                cell.setMCCString(mcc.getString());
-                cell.setMNCString(mnc.getString());
+                LocationBeacon cell = LocationBeacon.instanceOf("CellIDBeacon");
+                cell.setProperty("cellid", cellid.getString());
+                cell.setProperty("lac", lac.getString());
+                cell.setProperty("mcc", mcc.getString());
+                cell.setProperty("mnc", mnc.getString());
                 if (cell.resolve()) {
+                    double error = ((Double)cell.getProperty("errorInMeter")).doubleValue();
                     LocationData loc = new LocationData(cell.getLatitude(),
                                                         cell.getLongitude(),
-                                                        cell.getErrorInMeter());
+                                                        error);
+                    loc.source = "Manual";
                     app.getCollector().setLocation(loc);
                 }
             }

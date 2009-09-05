@@ -142,6 +142,7 @@ public class ConfigDisplay extends DisplayModule {
                     int currVal = 0;
                     int newVal = currVal;
                     try {
+                        currVal = configItem.getIntValue();
                         newVal = Integer.parseInt(val);
                         if (currVal != newVal) {
                             configItem.setValue(newVal);
@@ -155,6 +156,7 @@ public class ConfigDisplay extends DisplayModule {
                     double currVal = 0;
                     double newVal = currVal;
                     try {
+                        currVal = configItem.getDoubleValue();
                         newVal = Double.parseDouble(val);
                         if (currVal != newVal) {
                             configItem.setValue(newVal);
@@ -163,6 +165,7 @@ public class ConfigDisplay extends DisplayModule {
                     } catch (Exception e) {} //Assume not changed.
                 }
             }
+            app.getConfigStore().updateConfigItems();
             app.handleNextState(previousState); //Go back to previous display.
         } else {
             System.out.println("Unknown command received in config form.");

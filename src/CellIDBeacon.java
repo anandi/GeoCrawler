@@ -22,6 +22,38 @@ public class CellIDBeacon extends LocationBeacon {
         errorInMeter = 2000; //Should actually be meaningfully set by resolve!
     }
 
+    public boolean setProperty(String property, Object value) {
+        String val = (String)value;
+        if ((val == null) || (val.equals("")))
+            return false;
+        if (property.equals("mnc")) {
+            mnc = val;
+            return true;
+        } else if (property.equals("mcc")) {
+            mcc = val;
+            return true;
+        } else if (property.equals("lac")) {
+            lac = val;
+            return true;
+        } else if (property.equals("cellid")) {
+            cellid = val;
+            return true;
+        }
+        return super.setProperty(property, value);
+    }
+
+    public Object getProperty(String property) {
+        if (property.equals("mnc"))
+            return mnc;
+        else if (property.equals("mcc"))
+            return mcc;
+        else if (property.equals("lac"))
+            return lac;
+        else if (property.equals("cellid"))
+            return cellid;
+        return super.getProperty(property);
+    }
+
     /*
      * Code copied from http://www.easywms.com/easywms/?q=en/node/3589
      * Mashed up with coding style from
@@ -64,17 +96,6 @@ public class CellIDBeacon extends LocationBeacon {
         return true;
     }
 
-    public String getCellIdString() {
-        return cellid;
-    }
-
-    public boolean setCellIdString(String value) {
-        if ((value == null) || (value.equals("")))
-            return false;
-        cellid = value; //Should check for format etc.
-        return true;
-    }
-
     /**
      * get the lac sring from phone
      */
@@ -108,17 +129,6 @@ public class CellIDBeacon extends LocationBeacon {
                 return false;
 //        }
         lac = out;
-        return true;
-    }
-
-    public String getLACString() {
-        return lac;
-    }
-
-    public boolean setLACString(String value) {
-        if ((value == null) || (value.equals("")))
-            return false;
-        lac = value; //Should check for format etc.
         return true;
     }
 
@@ -195,17 +205,6 @@ public class CellIDBeacon extends LocationBeacon {
         return true;
     }
 
-    public String getMCCString() {
-        return mcc;
-    }
-
-    public boolean setMCCString(String value) {
-        if ((value == null) || (value.equals("")))
-            return false;
-        mcc = value; //Should check for format etc.
-        return true;
-    }
-
     /**
      * For moto, Example IMSI (O2 UK): 234103530089555
      * String mnc = imsi.substring(3,5); // 10 (O2)
@@ -241,25 +240,23 @@ public class CellIDBeacon extends LocationBeacon {
         return true;
     }
 
-    public String getMNCString() {
-        return mnc;
-    }
-
-    public boolean setMNCString(String value) {
-        if ((value == null) || (value.equals("")))
-            return false;
-        mnc = value; //Should check for format etc.
-        return true;
-    }
-
-    public boolean initialze() {
-        //Nothing to initialize.
-        return true;
-    }
-
     public boolean update() {
-        if (getCellId() && getLAC() && getMCC() && getMNC())
-            return true;
+        String oldMCC = mcc;
+        String oldMNC = mnc;
+        String oldLAC = lac;
+        String oldCellID = cellid;
+
+        if (getCellId() && getLAC() && getMCC() && getMNC()) {
+            if ((oldMCC != null) && oldMCC.equals(mcc))
+                return true;
+            if ((oldMNC != null) && oldMNC.equals(mnc))
+                return true;
+            if ((oldLAC != null) && oldLAC.equals(lac))
+                return true;
+            if ((oldCellID != null) && oldCellID.equals(cellid))
+                return true;
+            return resolveWithOpenCellID();
+        }
         return false;
     }
 
@@ -340,7 +337,7 @@ public class CellIDBeacon extends LocationBeacon {
         return response.substring(valBegin, valEnd);
     }
 
-    public void updateService(double lat, double lon) {
+    public void annotateWithLatLon(double lat, double lon) {
         if ((mnc == null) || (mnc.length() == 0))
             return;
         if ((mcc == null) || (mcc.length() == 0))

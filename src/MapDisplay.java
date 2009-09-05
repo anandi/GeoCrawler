@@ -16,7 +16,7 @@ import java.util.Vector;
  *
  * @author anandi
  */
-public class MapDisplay extends DisplayModule {
+public class MapDisplay extends DisplayModule implements ConfigListener {
     private static final String YAHOO_REST_MAP_URL = "http://local.yahooapis.com/MapsService/V1/mapImage?appid=";
     private static final int DEFAULT_ZOOM = 3;
     private static final int MAX_ZOOM = 10;
@@ -80,9 +80,6 @@ public class MapDisplay extends DisplayModule {
         canvas.addCommand(this.getBackCommand());
         canvas.setCommandListener(this);
 
-        //Till we use Canvas and do getWidth and getHeight!
-//        height = form.getHeight();
-//        width = form.getWidth();
         height = canvas.getHeight();
         width = canvas.getWidth();
         heightString = Integer.toString(height);
@@ -211,15 +208,28 @@ public class MapDisplay extends DisplayModule {
             app.handleNextState(GeoCrawler.STATE_BEGIN);
         else if (c == manualCommand)
             app.handleNextState(GeoCrawler.STATE_MANUAL);
-        else
-            System.out.println("Unknown command received in map form.");
+        else {
+            String label = c.getLabel();
+            Enumeration e = this.mapItemSources.elements();
+            boolean found = false;
+            while (e.hasMoreElements()) {
+                MapItemSource s = (MapItemSource)e.nextElement();
+                String name = s.getServiceName();
+                if (label.equals(name)) {
+                    found = true;
+                    if (s.getCustomDisplayState() == MapItemSource.CUSTOM_STATE_NONE) {
+                        s.setRefreshMode(MapItemSource.REFRESH_REQUESTED);
+                        this.refreshMapItems();
+                    } else
+                        app.handleNextState(s.getCustomDisplayState());
+                }
+            }
+            if (!found)
+                app.setError("Unknown command received in map context.");
+        }
     }
 
-    public void notifyLocationUpdate() {
-        shift_lat = 0.0;
-        shift_lon = 0.0;
-        currentZoom = MapDisplay.DEFAULT_ZOOM;
-        displayMode = MODE_DISPLAY_CURRENT;
+    protected void refreshMapItems() {
         if (itemUpdaterThread != null) {
             //A background thread is running to update map items. Stop it!
             itemUpdaterThread.stop();
@@ -232,23 +242,14 @@ public class MapDisplay extends DisplayModule {
         itemUpdaterThread.start();
     }
 
-    /*Should really be using the YDN APIs here. There are some Y!Go code to
-      handle map bounding boxes...
-     *  http://svn.corp.yahoo.com/view/yahoo/platform/ygeo/ajaxapi/branches/pretrunk_build/Maps/Mercator/Mercator.js?revision=5257&view=co
-rmsguhan: in the file i gave you, please look at Mercator.prototype.ll_to_tile
-rmsguhan: this accepts the center lat lon, or Geo point , which is the instance of the GeoPoint class
-rmsguhan: var getTileInfo = function(gp,z) {
-        var mo = (z && z!=zoomLevel)? (new Mercator(z)) : MP;
-        var txy = mo.ll_to_tile(gp);
-        var tll = mo.xy_to_ll(txy.tx, txy.ty, 0, 0);
-        var pointpxy = mo.ll_to_pxy(gp.Lat, gp.Lon);
-        var tilepxy = mo.ll_to_pxy(tll.Lat, tll.Lon);
-        return {xy: txy, ll: tll, cp: {x: pointpxy.x-tilepxy.x, y: tilepxy.y-pointpxy.y}};
-    };
-rmsguhan: this code might give the tile info
-rmsguhan: all this is in the Map API
-rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/go/skin/YGoMapControl.java?revision=1.116&view=markup
-     */
+    public void notifyLocationUpdate() {
+        shift_lat = 0.0;
+        shift_lon = 0.0;
+        currentZoom = MapDisplay.DEFAULT_ZOOM;
+        displayMode = MODE_DISPLAY_CURRENT;
+        refreshMapItems();
+    }
+
     private int getDisplayRadiusInKm() {
         return (1 << currentZoom);
     }
@@ -486,8 +487,43 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
         return lon;
     }
 
-    public void registerMapItemSource(String sourceName, MapItemSource source) {
-        mapItemSources.put(sourceName, source);
+    public void registerMapItemSource(MapItemSource source) {
+        if (source == null)
+            return;
+        String name = source.getServiceName();
+        String key = source.getConfigKey();
+        if (key.length() > 0) {
+            String display = "Automatically fetch "+name+" aa needed";
+            int mode = source.getDefaultRunMode();
+            boolean b = (mode == MapItemSource.REFRESH_AUTO);
+
+            ConfigItem c = new ConfigItem(key, display, true, b, this);
+            if (!app.getConfigStore().registerConfigItem(c)) {
+                app.setError("Attempt to regster duplicate key: "+key+" for map item source: "+name);
+                return; //Maybe duplicate. Don't register.
+            }
+
+            try {
+                b = c.getBoolValue();
+            } catch (Exception e) {
+                app.setError("Attempt to get configured run mode for map item source: "+name+" failed.");
+                return; //Something screwed up. Don't register.
+            }
+
+            source.setRefreshMode((b) ? MapItemSource.REFRESH_AUTO : MapItemSource.REFRESH_MANUAL);
+        } else
+            key = name; //We really don't need the key unless config has to call us back.
+        mapItemSources.put(key, source);
+        Command command = new Command(name, Command.SCREEN, 1);
+        canvas.addCommand(command);
+    }
+
+    private void updateMapItemRefreshMode(String key, boolean value) {
+        MapItemSource source = (MapItemSource)mapItemSources.get(key);
+        if (source != null) {
+            source.setRefreshMode((value) ? MapItemSource.REFRESH_AUTO : MapItemSource.REFRESH_MANUAL);
+            refreshMapItems();
+        }
     }
 
     private synchronized void updateMapItemsInCanvas() {
@@ -578,5 +614,16 @@ rmsguhan: http://vault.yahoo.com/viewcvs/yahoo/clife/devices/j2me/src/com/yahoo/
             thread.stop();
             itemUpdaterThread = null;
         }
+    }
+
+    public void notifyChanged(ConfigItem item) {
+        String key = item.getKey();
+        boolean b = false;
+        try {
+            b = item.getBoolValue();
+        } catch (Exception ex) {
+            return;
+        }
+        this.updateMapItemRefreshMode(key, b);
     }
 }

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
+import java.util.Date;
 /**
  *
  * @author anandi
@@ -14,6 +14,8 @@ public class LocationMaster extends Thread implements ConfigListener {
     private static final String CELL_ENABLED = "CELL.enabled";
     private static final String UPDATE_INTERVAL = "LM.minutes";
     private static final String UPDATE_AUTO = "LM.run";
+    private static final String FIREEAGLE_QUERY = "SVC.fe.query";
+    private static final String IP_QUERY = "SVC.ip.query";
 
     private int lock; //Protects location.
     private LocationData location;
@@ -25,30 +27,54 @@ public class LocationMaster extends Thread implements ConfigListener {
 
     private LocationConsumer consumer;
     private FireEagle fireEagle;
+    private boolean queryFireEagle;
     private double gpsErrorInMeters;
     private int gpsTimeoutInSeconds;
-    GPSBeacon gps;
-    CellIDBeacon cell;
-    IPBeacon ip;
+    private Date lastRun;
+
+    LocationBeacon gps;
+    LocationBeacon cell;
+    LocationBeacon ip;
 
     public LocationMaster(GeoCrawler app) {
         lock = 0;
         location = null;
         consumer = app;
+        lastRun = null;
 
         initialized = false; //Indicate that we are not ready to run yet.
+        PersistentConfig pc = app.getConfigStore();
+        fireEagle = app.getFireEagle();
 
-        //Always use IP beacon...
-        ip = new IPBeacon();
+        //By default, do not query Fire Eagle for location.
+        queryFireEagle = false;
+        ConfigItem feQueryItem = new ConfigItem(FIREEAGLE_QUERY,
+                                                "Query Fire Eagle for your location (if authorized) when no location can be found.",
+                                                true, queryFireEagle, this);
+        pc.registerConfigItem(feQueryItem);
+        try {
+            queryFireEagle = feQueryItem.getBoolValue();
+        } catch (Exception e) {}
+
+        ip = null;
+        boolean useIP = false;
+        ConfigItem ipItem = new ConfigItem(IP_QUERY,
+                                           "Enable IP based location detection",
+                                           true, useIP, this);
+        pc.registerConfigItem(ipItem);
+        try {
+            useIP = ipItem.getBoolValue();
+        } catch (Exception e) {}
+
+        if (useIP)
+            ip = LocationBeacon.instanceOf("IPBeacon");
 
         gps = null;
         boolean useGPS = true;
         ConfigItem gpsItem = new ConfigItem(GPS_ENABLED,
                                             "Enable GPS signal detection",
                                             true, useGPS, this);
-        PersistentConfig pc = app.getConfigStore();
         pc.registerConfigItem(gpsItem);
-        fireEagle = app.getFireEagle();
         try {
             useGPS = gpsItem.getBoolValue();
         } catch (Exception e) {} //Will not occur.
@@ -62,8 +88,13 @@ public class LocationMaster extends Thread implements ConfigListener {
                                              "Maximum seconds for a GPS detection timeout",
                                              true, gpsTimeoutInSeconds, this));
 
-        if (useGPS && (gps == null))
-            gps = new GPSBeacon(gpsErrorInMeters, gpsTimeoutInSeconds);
+        if (useGPS && (gps == null)) {
+            gps = LocationBeacon.instanceOf("GPSBeacon");
+            if (gps != null) {
+                gps.setProperty("errorInMeter", new Double(gpsErrorInMeters));
+                gps.setProperty("timeoutInSecond", new Integer(gpsTimeoutInSeconds));
+            }
+        }
 
         cell = null;
         boolean useCell = true;
@@ -76,7 +107,7 @@ public class LocationMaster extends Thread implements ConfigListener {
         } catch (Exception e) {}
 
         if (useCell && (cell == null))
-            cell = new CellIDBeacon();
+            cell = LocationBeacon.instanceOf("CellIDBeacon");
 
         int updateIntervalInMinutes = 5;
         setRunIntervalInMinutes(updateIntervalInMinutes);
@@ -99,10 +130,22 @@ public class LocationMaster extends Thread implements ConfigListener {
         initialized = true;
     }
 
+    public Date getLastRun() {
+        return lastRun;
+    }
+
+    private void feQueryEnable(boolean val) {
+        queryFireEagle = val;
+    }
+
     private void GPSEnable(boolean val) {
-        if (val && (gps == null))
-            gps = new GPSBeacon(gpsErrorInMeters, gpsTimeoutInSeconds);
-        else if (!(val || (gps == null)))
+        if (val && (gps == null)) {
+            gps = LocationBeacon.instanceOf("GPSBeacon");
+            if (gps == null) {
+                gps.setProperty("errorInMeter", new Double(gpsErrorInMeters));
+                gps.setProperty("timeoutInSecond", new Integer(gpsTimeoutInSeconds));
+            }
+        } else if (!(val || (gps == null)))
             gps = null; //Has race condition!
     }
 
@@ -112,9 +155,16 @@ public class LocationMaster extends Thread implements ConfigListener {
 
     private void CellEnable(boolean val) {
         if (val && (cell == null))
-            cell = new CellIDBeacon();
+            cell = LocationBeacon.instanceOf("CellIDBeacon");
         else if (!(val || (cell == null)))
             cell = null; //Has race condition!
+    }
+
+    private void IPEnable(boolean val) {
+        if (val && (ip == null))
+            ip = LocationBeacon.instanceOf("IPBeacon");
+        else if (!(val || (ip == null)))
+            ip = null; //Has race condition!
     }
 
     public boolean CellEnabled() {
@@ -125,7 +175,7 @@ public class LocationMaster extends Thread implements ConfigListener {
         if (error <= 10)
             return; //Doesn't take any effect! We need to propagate this back.
         if (gps != null)
-            gps.setErrorInMeters(error);
+            gps.setProperty("errorInMeter", new Double(error));
     }
 
     public double getGPSErrorInMeters() {
@@ -136,7 +186,7 @@ public class LocationMaster extends Thread implements ConfigListener {
         if (seconds <= 0)
             return;
         if (gps != null)
-            gps.setTimeoutInSeconds(seconds);
+            gps.setProperty("timeoutInSecond", new Integer(seconds));
     }
 
     public int getGPSTimeoutInSeconds() {
@@ -216,50 +266,53 @@ public class LocationMaster extends Thread implements ConfigListener {
         return running;
     }
 
+    //The reason this is not part of the LocationBeacon class is because we want
+    //to have a clear separation between the beacon (which is mostly external
+    //format, and our own custom internal format.
+    protected LocationData getLocationFromBeacon(LocationBeacon beacon) {
+        double error = ((Double)beacon.getProperty("errorInMeter")).doubleValue();
+        return new LocationData(beacon.getLatitude(), beacon.getLongitude(), error);
+    }
+
     protected LocationData getUpdate() {
+        LocationData loc = null;
+        boolean gpsUpdate = false;
+
         //First try the GPS.
-        if (gps != null) {
-            if (gps.update()) {
-                LocationData loc = new LocationData(gps.getLatitude(),
-                                    gps.getLongitude(), gps.getErrorInMeter());
-                //Give back to where we get from ...
-                if (CellEnabled() && (cell != null)) {
-                    if (cell.update()) {
-                        //We have a valid cell tower identity.
-                        cell.updateService(loc.getLatitude(), loc.getLongitude());
-                    }
-                }
-                return loc;
-            }
+        if ((gps != null) && gps.update()) {
+            loc = getLocationFromBeacon(gps);
+            gpsUpdate = true;
+            loc.source = "GPS";
         }
 
-        if (cell != null) {
-            if (cell.update()) {
-                //We also need to resolve!
-                if (cell.resolve()) {
-                    LocationData loc = new LocationData(cell.getLatitude(),
-                                    cell.getLongitude(), cell.getErrorInMeter());
-                    return loc;
-                }
-            }
+        if ((cell != null) && cell.update()) {
+            if (loc == null) {
+                loc = getLocationFromBeacon(cell);
+                loc.source = "Cell ID";
+            } else if (gpsUpdate)
+                cell.annotateWithLatLon(loc.getLatitude(), loc.getLongitude());
         }
 
-        if (ip != null) {
-            if (ip.update()) {
-                LocationData loc = new LocationData(ip.getLatitude(),
-                                       ip.getLongitude(), ip.getErrorInMeter());
-                return loc;
-            }
+        if (ip != null && ip.update()) {
+            if (loc == null) {
+                loc = getLocationFromBeacon(ip);
+                loc.source = "IP Address";
+            } else if (gpsUpdate)
+                ip.annotateWithLatLon(loc.getLatitude(), loc.getLongitude());
         }
+
+        if (loc != null)
+            return loc;
 
         //If we are here, then we could not find an update through the
         //beacons. Let us see if we can get something from Fire Eagle...
-        if ((fireEagle != null) && (fireEagle.getState() == FireEagle.STATE_AUTHORIZED)) {
-            LocationData loc = fireEagle.getLocation();
-            return loc;
+        if (queryFireEagle && (fireEagle != null)
+            && (fireEagle.getState() == FireEagle.STATE_AUTHORIZED)) {
+            loc = fireEagle.getLocation();
+            loc.source = "Fire Eagle";
         }
 
-        return null;
+        return loc;
     }
 
     //http://www.codeproject.com/KB/cs/distancebetweenlocations.aspx has some
@@ -298,17 +351,35 @@ public class LocationMaster extends Thread implements ConfigListener {
 
         running = true;
 
+        //Initialize all the beacons...
+        if (gps != null)
+            gps.initialize();
+        if (cell != null)
+            cell.initialize();
+        if (ip != null)
+            ip.initialize();
+
         //Atleast, try to get the Fire Eagle location if possible...
-        if ((fireEagle != null) && (fireEagle.getState() == FireEagle.STATE_AUTHORIZED)) {
+        if (queryFireEagle && (fireEagle != null)
+            && (fireEagle.getState() == FireEagle.STATE_AUTHORIZED)) {
             LocationData loc = fireEagle.getLocation();
-            if (loc != null)
+            if (loc != null) {
+                loc.source = "Fire Eagle";
                 setLocation(loc);
+            }
         }
+
+        boolean firstTime = true;
 
         while (autoRun && running) {
             LocationData loc = getUpdate();
-            if ((loc != null) && checkUpdate(loc))
-                setLocation(loc);
+            if (loc != null) {
+                if (firstTime || checkUpdate(loc)) {
+                    setLocation(loc);
+                    firstTime = false;
+                }
+            }
+            lastRun = new Date();
 
             if (location == null)
                 consumer.detectFailed(); //Send a message saying we have no location.
@@ -337,6 +408,10 @@ public class LocationMaster extends Thread implements ConfigListener {
             this.setRunIntervalInMinutes(item.getIntValue());
         else if (item.getKey().equals(UPDATE_AUTO))
             this.setAutoRunMode(item.getBoolValue());
+        else if (item.getKey().equals(FIREEAGLE_QUERY))
+            this.feQueryEnable(item.getBoolValue());
+        else if (item.getKey().equals(IP_QUERY))
+            this.IPEnable(item.getBoolValue());
         } catch (Exception e) {} //Shouldn't be thrown.
     }
 }

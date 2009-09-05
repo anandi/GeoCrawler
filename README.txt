@@ -16,7 +16,7 @@ support the following:
 
 1. J2ME (Java Apps) [For geeks: MIDP 2.0, CLDC 1.1]
 
-2. JSR-172 (this is integral to GPS lookup and the app is likely to crash
+2. JSR-179 (this is integral to GPS lookup and the app is likely to crash
 or not install if this is missing. I am working on making the app function
 even if this is not present)
 
@@ -28,6 +28,12 @@ have configuration settings that will do a one-time authorization).
 4. HTTPS support. This is needed only for the Fire Eagle component right
 now. My tests with Blackberry shows that while the above three pre-requisites
 are satisfied, this is not. I have to still see if it works with a Blackberry.
+
+Getting it:
+===========
+You can access the latest JAR from:
+http://github.com/anandi/GeoCrawler/raw/master/dist/GeoCrawler.jar
+Tiny URL: http://tinyurl.com/n26lpu
 
 Screenshots:
 ============

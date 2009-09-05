@@ -16,7 +16,7 @@ public class LocationData {
     private double lon;
     private double errInMeters;
     private String address;
-    Date timeStamp;
+    private Date timeStamp;
 
     //Design-wise, this is the stupidest thing that we can do, but,
     //unfortunately, the FireEagle API does not return a precise lat-lon pair on
@@ -29,6 +29,7 @@ public class LocationData {
     //So, the best we can do is to tie this structure to Fire Eagle (subclass??)
     //so that atleast the flag can be set! Bad design!
     public boolean updatedFireEagle;
+    public String source; //An optional source stamping.
 
     LocationData(double lat, double lon, double error) {
         this.lat = lat;
@@ -37,6 +38,7 @@ public class LocationData {
         timeStamp = new Date();
         address = null;
         updatedFireEagle = false;
+        source = null;
     }
 
     public double getLatitude() {
