@@ -1,3 +1,6 @@
+Version Alpha 0.1
+=================
+
 Welcome to GeoCrawler. This is a J2ME midlet that can sense your position
 through GPS or Cell tower (using APIs from opencellid.org) and show you
 on a map. I have also added Yahoo! Upcoming integration, so that the app
