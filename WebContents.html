@@ -1,0 +1,372 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 2.0  (Win32)">
+	<META NAME="CREATED" CONTENT="20090906;22083800">
+	<META NAME="CHANGED" CONTENT="20090907;14521882">
+	<STYLE>
+	<!--
+		@page { size: 8.5in 11in; margin: 0.79in }
+		P { margin-bottom: 0.08in }
+		H1 { margin-bottom: 0.08in }
+		H1.western { font-family: "Arial", sans-serif; font-size: 16pt }
+		H1.cjk { font-family: "Arial Unicode MS"; font-size: 16pt }
+		H1.ctl { font-family: "Tahoma"; font-size: 16pt }
+		H2 { margin-bottom: 0.08in }
+		H2.western { font-family: "Arial", sans-serif; font-size: 14pt; font-style: italic }
+		H2.cjk { font-size: 14pt; font-style: italic }
+		H2.ctl { font-size: 14pt; font-style: italic }
+		H3 { margin-bottom: 0.08in }
+		H3.western { font-family: "Arial", sans-serif }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<P ALIGN=CENTER STYLE="margin-bottom: 0in"><FONT SIZE=5><B>Welcome to
+GeoCrawler</B></FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT SIZE=2>(<B>Note</B>: Yeah! The
+page design sucks. I had to rustle up something that atleast has the
+text and images, so people can read about GeoCrawler. I really need
+to spend some time clearing this out, but getting the app published
+is more important. Apologies folks, but I will be cleaning it up bit
+by bit)</FONT></P>
+<H1 CLASS="western">Introduction</H1>
+<P>If you already know everything about GeoCrawler and just want to
+download it, please jump straight to the Getting It section.</P>
+<H2 CLASS="western">What is it?</H2>
+<P>GeoCrawler is a J2ME (which means it is Java) application which
+runs on your mobile phone and tries to update your location to Fire
+Eagle. In addition, it tries to add services like Yahoo! Local Search
+and Yahoo! Upcoming events to your currently detected location by
+plotting them on a map. Check out the Screenshots section for more
+details.</P>
+<H2 CLASS="western">Why GeoCrawler?</H2>
+<P>GeoCrawler came out of a small discussion I had with one of my
+friends in international marketing and sales, who is an inveterate
+pub-crawler. He wanted a easy way of finding the nearest hot pubs
+wherever he is.</P>
+<P>So, we asked, what about 'anything' near you? The idea of crawling
+(virtually) across the mapscape in your mobile and checking things
+out around you was found to be appealing... and GeoCrawler was
+conceived.</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<H2 CLASS="western">Why Fire Eagle?</H2>
+<P>Well, you don't go pub-crawling all by yourself, do you?
+Especially, in a new place, you want your friends to come and find
+you when you find a good pub (or a rock concert) to go to.</P>
+<H2 CLASS="western">What it is not?</H2>
+<P>We are not headed out to be a social-app clone. This is also not a
+recommendation engine or a content-sharing vehicle. This is purely my
+private project that I thought would be nice to share with people.</P>
+<P>Given the richness of web-based services out there (think
+Facebook, Twitter, Flickr, etc), I would add things by and by, but,
+apart from keeping the current stuff working, I can't promise much.
+It could go in any direction in the future, but rest assured that me
+(and the friend who goes pub crawling) find the current functionality
+absolutely the core items that will continue to be there.</P>
+<H1 CLASS="western">Requirements and capabilities</H1>
+<H2 CLASS="western">Ok, so what does it need to run?</H2>
+<P>There's a simple and a complex answer to that...</P>
+<P>At the minimum you need a mobile that supports J2ME applications
+and has a web connection.</P>
+<P>Beyond that, to get the full benefit, you need a GPS and a mobile
+that can do HTTPS connections.</P>
+<H3 CLASS="western">What do you lose if you don't have GPS?</H3>
+<P>You cannot have the app detect your locations automatically. Well,
+if you are having a GSM mobile and with any luck the Cell ID
+detection feature works, the app can still detect you (it surely
+didn't work on any of the phones I tried, but I left it in, in case
+it works for someone). That would still give your location as that of
+the cell tower it could detect, and that would be a few miles away!</P>
+<P>There is also a IP lookup feature that might work, but IP lookups
+are notorious. They may decide that you are in a completely different
+city. Use it with care.</P>
+<P>If all the above fails, you can still do map scroll and click (or
+type in your location and let Fire Eagle resolve it)</P>
+<H3 CLASS="western">What do you lose if you don't have HTTPS?</H3>
+<P>Currently, all the Fire Eagle APIs are HTTPS based. They are meant
+to protect you from anyone sniffing on your network data. Alas, that
+also means that many mobiles cannot talk to Fire Eagle because they
+do not support HTTPS.</P>
+<H3 CLASS="western">What do you lose if you don't authorize Fire
+Eagle (either because you don't have HTTPS or because you just don't
+want to)?</H3>
+<P STYLE="margin-bottom: 0in">You cannot manually update your
+location by typing it in. Also, the application will not be able to
+resolve your location to a human readable address. And, finally, your
+friends will not get to know where you are.</P>
+<H2 CLASS="western">So, what will continue to work?</H2>
+<P STYLE="margin-bottom: 0in">You will still be able to place
+yourself somewhere and see the Yahoo! Local search results and the
+Upcoming events around you.</P>
+<H1 CLASS="western">Is it safe to use GeoCrawler?</H1>
+<H2 CLASS="western">How can I be sure that this is not some spyware
+or a government tracking device?</H2>
+<P>You don't need to install the binary that is available. The
+sources for GeoCrawler are out on the web and you can get them <A HREF="http://github.com/anandi/GeoCrawler/tree/master">here</A>.
+Of couse, many of the web services need keys and I am not sharing
+those keys. So if you just want to build it for yourself and load it
+to your phone using Bluetooth, you will have to get those yourself.</P>
+<H2 CLASS="western">Why is this application not signed?</H2>
+<P>This is not, right now, a commercial grade application. Signing
+stuff with trusted signatures which work on all mobile platforms are
+a headache and also a costly matter. Not for small hobbyists. But, if
+I find that hundreds of people have (surprisingly) started to use
+this, I <B>will</B> go and sign it. Promise.</P>
+<H2 CLASS="western">Does it eat up all my web surfing quota from the
+ISP?</H2>
+<P>Well, no. The only automatic web transaction it tries to do is
+update your location to Fire Eagle when it detects your new location.
+That is, assuming that you have authorized Fire Eagle. This is the
+only thing that cannot be turned off. This mostly runs once every 5
+minutes, but you can switch <B>that</B> off in the configuration. Or,
+you can make it take more time between location detection.</P>
+<P>Ofcourse, it can use up a lot of bandwidth if you allow automatic
+checks for a few things like IP address lookups and Upcoming events
+around you, but those are turned off by default.</P>
+<H2 CLASS="western">I still want the application, but is it reliable?</H2>
+<P>This, I assume, is an alternative for, &ldquo;<B>does it crash?</B>&rdquo;
+The simple part of the answer is, &ldquo;<B>rarely</B>&rdquo;. 
+</P>
+<P>It is, what the software geeks call &ldquo;<B>Alpha</B>&rdquo;
+quality, which means that it is not fully baked yet, but functional
+enough. Me and my friends have tested on quite a few handsets and
+found it to be working reliably enough... taking it out on our trips.</P>
+<H2 CLASS="western">Ok, but what happens if it does crash?</H2>
+<P>Since I cannot guarantee that it does not crash <I>ever</I>, it is
+better to point out that it runs in a pretty sterile Java environment
+of it's own, which means that it does not lock up the phone anyhow.
+If it becomes non-responsive, just close it.</P>
+<H2 CLASS="western">Do I get bug-fixes?</H2>
+<P>Sure. I will be fixing the bugs as I get them. The application has
+a capability through which you can check whether a new version is
+available. No fancy auto-update feature mind you! You have to update
+manually.</P>
+<H1 CLASS="western">Getting It</H1>
+<P>You can download the latest version of the application from <A HREF="http://github.com/anandi/GeoCrawler/raw/master/dist/GeoCrawler.jar">here</A>.
+It is better to download it straight to the mobile itself and see if
+the platform can install it. Some Nokia phones need a JAD file to go
+along with the binary, in order for it to be installed. This can be
+found <A HREF="http://github.com/anandi/GeoCrawler/raw/master/dist/GeoCrawler.jad">here</A>.</P>
+<P>If, for some odd reason, you have to type in that long URL into
+the browser of your mobile to get the binary, here's a <A HREF="http://tinyurl.com/">Tiny
+URL</A> to help you out: <A HREF="http://tinyurl.com/n26lpu">http://tinyurl.com/n26lpu</A>.</P>
+<P>Ofcourse, if your phone has Bluetooth, you can always download the
+files to your PC and then upload through Bluetooth.</P>
+<H2 CLASS="western">Before you install...</H2>
+<P>A couple of lines on usability here. J2ME apps suffer from all
+kind of restrictions by design to ensure that nobody can access your
+private data on the phone or do anything mischievous just because
+your trustingly installed an application that you thought is cool,
+but did not check the fine-print.</P>
+<P>As a result of the above, the phone will, very likely, ask you to
+give permission to the application to access your GPS device and your
+web connection at an irritating frequency. Commercial grade vendors
+get around this bad experience by signing their applications with
+verification certificates that the mobile can trust. But, this is too
+much of a trouble for small hobbyists like me. Of course, if there
+are enough people using it, I will surely do that, but not now.</P>
+<P>I know that Nokia phones have a way to give one time permissions
+for these kind of things to installed applications, but it differs
+from model to model. One that I know is:</P>
+<BLOCKQUOTE>&ldquo;...Go to the main menu. Click on Tools, then start
+the App. mgr. 
+</BLOCKQUOTE>
+<UL>
+	<LI><BLOCKQUOTE>Find the Updater in the list of installed apps and
+	open it either with 'Suite Settings' or 'Open'. 
+	</BLOCKQUOTE>
+	<LI><BLOCKQUOTE>You'll see a list of settings for the application.
+	You can set a default access point if you like. Make sure to set
+	&quot;Network access&quot; and &quot;Positioning&quot; to &quot;Ask
+	first time&quot;. After setting that up, you should only be asked
+	once when you start the application. 
+	</BLOCKQUOTE>
+</UL>
+<BLOCKQUOTE>...&rdquo; (taken from Simon King's <A HREF="http://fireeagle.yahoo.net/j2me">Fire
+Eagle J2ME updater</A> page)</BLOCKQUOTE>
+<P>On other platforms also (like Sony Ericson), this should be
+possible, but you got to figure it out yourself. If you can, and want
+that knowledge to be posted here, please mail me and I will
+trustingly put it up.</P>
+<H1 CLASS="western">I installed it. Now what?</H1>
+<P>I am being very terse here. There are a huge number of
+combinations possible, but I would like to focus on the most
+important ones and leave the rest for you to explore. Please write
+back if you think a particular state of the application is too
+confusing, and I will add the details here. Also, feel free to pont
+out mistakes in this documentation.</P>
+<H2 CLASS="western"><IMG SRC="WebContents_html_387b7c0d.png" NAME="graphics2" ALIGN=LEFT WIDTH=252 HEIGHT=702 BORDER=0><BR CLEAR=LEFT>The
+first screen</H2>
+<P>On starting the application for the first time, the first screen
+would look something like the image shown here. This one urges you to
+authorize with Fire Eagle. You can bypass it if you must. To
+authorize, you need to choose Fire Eagle from the menu and proceed.</P>
+<H3 CLASS="western">Authorizing Fire Eagle</H3>
+<P>The process of authorization is a bit cumbersome and tedious at
+the moment because of various J2ME limitations, but overall it boils
+down to:</P>
+<OL>
+	<LI><P>The application contacts the Fire Eagle web site and get's
+	you a one-time token that it displays. This token is valid for an
+	hour.</P>
+	<LI><P>You visit the URL shown in the application and log in with
+	your Yahoo! ID.</P>
+	<LI><P>The web site will request you to type in the token shown to
+	you by the application.</P>
+	<LI><P>If you did so correctly, it will ask you to set permissions
+	for GeoCrawler.</P>
+	<LI><P>Once you say 'Confirm' in the web site, it generates another
+	token for you to type back in to the application.</P>
+</OL>
+<P>Yes. A lot of typing things in, I know. But, remember it is a
+one-time job. The application remembers your authorization on the
+mobile phone, so it will not pester you in the future.</P>
+<H3 CLASS="western">Deauthorizing Fire Eagle</H3>
+<P>If you are giving your phone to someone else, it is better to
+deauthorize (forget the authorization) Fire Eagle for the
+application. To do so, you can, in future (and after being
+successfully authorized), choose the Fire Eagle item from the main
+menu and then click 'Reset'.</P>
+<H2 CLASS="western"><IMG SRC="WebContents_html_m18241f56.png" NAME="graphics3" ALIGN=LEFT WIDTH=254 HEIGHT=703 BORDER=0><BR CLEAR=LEFT>The
+Main Menu</H2>
+<P>Here's a run down of what all you can access from the main menu,
+whether or not you are authorized with Fire Eagle.</P>
+<P>Before we start describing these, note that, as I shall describe
+later, the behavior of the first screen changes once you authorize
+with Fire Eagle. It shall, if it can detect a location for you, jump
+directly into the My Location screen and you will have to press a
+Back button to come back and access these menu items.</P>
+<H3 CLASS="western">My Location</H3>
+<P>This is pretty much the main display of the application. It shows
+where the application thinks you currently are. If the application
+cannot detect a location for you, then it will prevent you from
+visiting this screen.</P>
+<H3 CLASS="western">Show Details</H3>
+<P>It will show you the details about how and when your location was
+sensed by the application. You can use it first to see if the phone
+can actually auto detect your location. This is independent of Fire
+Eagle authorization. More of a debug screen in case you suspect that
+the auto updater is not working.</P>
+<P>Note that GPS sensing takes some time and does not work indoors.</P>
+<H3 CLASS="western">Manual Location</H3>
+<P>Needs Fire Eagle authorization to translate a string to a
+location.</P>
+<P>Go and type in a location yourself. If the phone can detect GPS
+data (or somehow else divine your latitude-longitude), it will show
+it in the non-editable fields. This is a good way to also check if
+the phone is detecting your cell tower or not. If it does, those
+other non editable fields like MCC, MNC, ... will also be showing
+some values.</P>
+<P>I would love to know if the Cell ID detection works in your phone.
+Till date, I have had no luck.</P>
+<H3 CLASS="western">Config</H3>
+<P>The tweakables. Most of this is best left as defaults. I will add
+a section on which does soon. Changes made here are also remembered
+by the application.</P>
+<H3 CLASS="western">Last Error</H3>
+<P>Yet another debug screen. I have not been able to capture all the
+possible errors for display in this screen, but many will show up. If
+you suspect that the application is not doing something it should, it
+is valuable to check this out.</P>
+<P>Note: Due to a bug in the code (I will fix it later), some of the
+other information (not errors) can show up in this screen if they
+have been viewed since the application detected any error worth
+displayable.</P>
+<H3 CLASS="western">Fire Eagle</H3>
+<P>Mostly should be a one-time visit to authorize the application. As
+mentioned above, you may want to visit it later to deauthorize the
+application in case you are giving the phone to someone else.</P>
+<H3 CLASS="western">Check Update</H3>
+<P>Just a utility so that you don't have to remember where to visit
+to see if there are some important bug fixes that you would like to
+get.</P>
+<H2 CLASS="western"><IMG SRC="WebContents_html_4ad054a6.png" NAME="graphics4" ALIGN=LEFT WIDTH=252 HEIGHT=702 BORDER=0><BR CLEAR=LEFT>The
+My Location screen</H2>
+<P><BR><BR>
+</P>
+<P>This is the real screen. You can do most of the stuff from here.
+By default, you are centered on the map, unless you want to move
+around</P>
+<H3 CLASS="western">Context change</H3>
+<P>The 'C' (for Cancel) button is used to change context. It is a bit
+messy in use and I plan to change that soon. Right now, you can think
+of there being 3 modes:</P>
+<P><B>Summary</B>: Where your current location summary is displayed
+at the top of the map if you are centered on your current location.
+This is the default mode. Pressing the 'C' clears out the summary,
+which is the only difference with the next mode.</P>
+<P><B>Clear</B>: Same mode as summary, but there is no summary. All
+other key behavior is the same. Pressing a 'C' here brings you to the
+next mode.</P>
+<P><B>Roam</B>: When you have some items turned up in the map around
+you, you will be able to shift focus to those items. Your map does
+not change to center on them, only those small crosshairs turn from
+black to red. In this mode, a small summary is attempted for the
+object that is currently red in the map. Pressing a 'C' here would
+rotate you back to the 'Summary' mode again.</P>
+<P><B>Note</B>: When the map is not centered on you in any of the
+modes, the 'C' button will additionally bring it back to the view
+where you are at the center.</P>
+<H3 CLASS="western">Navigation</H3>
+<P><B>Note</B>: Zoom in and Zoom out are available in all the above
+modes (contexts). But, in Roam mode, the Left/Right/Up/Down keys are
+to be used to rotate through the other items on the map (those black
+small crosshairs that turn up as the result of your query).</P>
+<UL>
+	<LI><P>Left, Right, Up and Down keys move the map in the desired
+	directions. The shift amount is fixed for different zoom levels.</P>
+	<LI><P>Zoom in '*' lets you see more details by concentrating on a
+	smaller section of the map around you.</P>
+	<LI><P>Zoom out '#' does the opposite of zoom out.</P>
+</UL>
+<H3 CLASS="western">Fire</H3>
+<P>The small round button in the center of the Left/Right/Up/Down
+keys is the one I call 'Fire' (because it is used as one in games).
+Based on the context (mode), it has different functionality...</P>
+<OL>
+	<LI><P>When you are centered on yourself in Summary or Clear mode,
+	it shows you a screen with your location as a human readable string.
+	Needs Fire Eagle authorization.</P>
+	<LI><P>When you are in Summary or Clear mode, it will update your
+	location to what ever is the center of the map when you click. This
+	is one means of updating location manually.</P>
+	<LI><P>When you are in the Roam mode, the Fire button can be used to
+	see more detailed info about the item in the map which is the
+	current red crosshair.</P>
+</OL>
+<H3 CLASS="western">Searching</H3>
+<P>Yahoo! Local searches need a search query. Upcoming events simply
+try to retrieve the first few 'recommended' venues according to
+ranking (also called 'Best in Place').</P>
+<P>Unfortunately, my tests show that Locals search works only for US
+cities, and the Upcoming event service is not getting fixed
+(according to the responses I got), before September 09 end.</P>
+<H1 CLASS="western">Why does it not have...</H1>
+<H2 CLASS="western">An icon</H2>
+<P><IMG SRC="WebContents_html_me770c73.png" NAME="graphics1" ALIGN=LEFT WIDTH=32 HEIGHT=32 BORDER=0><BR CLEAR=LEFT>Well,
+I would like to have one. But, I need to read up more on how to put
+it there. Any interesting icons that you can think of? How about
+this:</P>
+<P><BR><BR>
+</P>
+<H2 CLASS="western">Background Run</H2>
+<P>Background run capabilities are important for updaters. But, I
+have had a debate over this with some and the argument is... &ldquo;If
+my spouse thought I was cheating and put a background updater in my
+phone to track me, how will I know that it is running?&rdquo; That is
+a <B>BIG</B> privacy concern. Better to think it through before
+putting it in. So, it has to wait.</P>
+<H1 CLASS="western">About me</H1>
+<P>My name is Arnab Nandi. Writing software is both my hobby and also
+work. You can contact me at <A HREF="mailto:arnob.nandi@gmail.com">arnob.nandi@gmail.com</A>.
+</P>
+<P>Please feel free to contact me with your feedback, whether it is
+about a serious bug or a feature you would like to see or something
+that you found out that people should know of... I would love to hear
+from you.</P>
+</BODY>
+</HTML>
