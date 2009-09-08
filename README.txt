@@ -9,6 +9,10 @@ out as you use it.
 
 I have tested this on a Nokia N78. It works.
 
+More Info
+=========
+I have made a manual file, which you can access at: http://github.com/anandi/GeoCrawler/raw/master/Manual.txt
+
 Current Version:
 ================
 0.1.0 Alpha.
