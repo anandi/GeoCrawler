@@ -1,0 +1,212 @@
+Welcome to GeoCrawler
+=====================
+Sorry that you are seeing this as a text file, but my friends and I are trying to put together a web site soon.
+
+1. Introduction
+===============
+If you already know everything about GeoCrawler and just want to download it, please jump straight to the Getting It section.
+
+1.1 What is it?
+===============
+GeoCrawler is a J2ME (which means it is Java) application which runs on your mobile phone and tries to update your location to Fire Eagle. In addition, it tries to add services like Yahoo! Local Search and Yahoo! Upcoming events to your currently detected location by plotting them on a map. Check out the Screenshots section for more details.
+
+1.2 Why GeoCrawler?
+===================
+GeoCrawler came out of a small discussion I had with one of my friends in international marketing and sales, who is an inveterate pub-crawler. He wanted a easy way of finding the nearest hot pubs wherever he is.
+So, we asked, what about 'anything' near you? The idea of crawling (virtually) across the mapscape in your mobile and checking things out around you was found to be appealing... and GeoCrawler was conceived.
+
+1.3 Why Fire Eagle?
+===================
+Well, you don't go pub-crawling all by yourself, do you? Especially, in a new place, you want your friends to come and find you when you find a good pub (or a rock concert) to go to.
+
+1.4 What it is not?
+===================
+We are not headed out to be a social-app clone. This is also not a recommendation engine or a content-sharing vehicle. This is purely my private project that I thought would be nice to share with people.
+Given the richness of web-based services out there (think Facebook, Twitter, Flickr, etc), I would add things by and by, but, apart from keeping the current stuff working, I can't promise much. It could go in any direction in the future, but rest assured that me (and the friend who goes pub crawling) find the current functionality absolutely the core items that will continue to be there.
+
+2. Requirements and capabilities
+================================
+
+2.1 Ok, so what does it need to run?
+====================================
+There's a simple and a complex answer to that...
+At the minimum you need a mobile that supports J2ME applications and has a web connection.
+Beyond that, to get the full benefit, you need a GPS and a mobile that can do HTTPS connections.
+
+2.2 What do you lose if you don't have GPS?
+===========================================
+You cannot have the app detect your locations automatically. Well, if you are having a GSM mobile and with any luck the Cell ID detection feature works, the app can still detect you (it surely didn't work on any of the phones I tried, but I left it in, in case it works for someone). That would still give your location as that of the cell tower it could detect, and that would be a few miles away!
+There is also a IP lookup feature that might work, but IP lookups are notorious. They may decide that you are in a completely different city. Use it with care.
+If all the above fails, you can still do map scroll and click (or type in your location and let Fire Eagle resolve it)
+
+2.3 What do you lose if you don't have HTTPS?
+=============================================
+Currently, all the Fire Eagle APIs are HTTPS based. They are meant to protect you from anyone sniffing on your network data. Alas, that also means that many mobiles cannot talk to Fire Eagle because they do not support HTTPS.
+
+2.4 What do you lose if you don't authorize Fire Eagle?
+=======================================================
+(Either because you don't have HTTPS or because you just don't want to)?
+You cannot manually update your location by typing it in. Also, the application will not be able to resolve your location to a human readable address. And, finally, your friends will not get to know where you are.
+
+2.5 So, what will continue to work?
+===================================
+You will still be able to place yourself somewhere and see the Yahoo! Local search results and the Upcoming events around you.
+
+3. Is it safe to use GeoCrawler?
+================================
+
+3.1 How can I be sure that this is not some spyware or a malicious program?
+====================================================================================
+You don't need to install the binary that is available. The sources for GeoCrawler are out on the web and you can get them here. Of couse, many of the web services need keys and I am not sharing those keys. So if you just want to build it for yourself and load it to your phone using Bluetooth, you will have to get those yourself.
+
+3.2 Why is this application not signed?
+=======================================
+This is not, right now, a commercial grade application. Signing stuff with trusted signatures which work on all mobile platforms are a headache and also a costly matter. Not for small hobbyists. But, if I find that hundreds of people have (surprisingly) started to use this, I will go and sign it. Promise.
+
+3.3 Does it eat up all my web surfing quota from the ISP?
+=========================================================
+Well, no. The only automatic web transaction it tries to do is update your location to Fire Eagle when it detects your new location. That is, assuming that you have authorized Fire Eagle. This is the only thing that cannot be turned off. This mostly runs once every 5 minutes, but you can switch that off in the configuration. Or, you can make it take more time between location detection.
+Ofcourse, it can use up a lot of bandwidth if you allow automatic checks for a few things like IP address lookups and Upcoming events around you, but those are turned off by default.
+
+3.4 I still want the application, but is it reliable?
+=====================================================
+This, I assume, is an alternative for, “does it crash?” The simple part of the answer is, “rarely”. If it installs and comes up at all, it should pretty much work.
+It is, what the software geeks call “Alpha” quality, which means that it is not fully baked yet, but functional enough. Me and my friends have tested on quite a few handsets and found it to be working reliably enough... taking it out on our trips.
+
+3.5 Ok, but what happens if it does crash?
+==========================================
+Since I cannot guarantee that it does not crash ever, it is better to point out that it runs in a pretty sterile Java environment of it's own, which means that it does not lock up the phone anyhow. If it becomes non-responsive, just close it.
+
+3.6 Do I get bug-fixes?
+=======================
+Sure. I will be fixing the bugs as I get them. The application has a capability through which you can check whether a new version is available. No fancy auto-update feature mind you! You have to update manually.
+
+4. Getting It
+=============
+You can download the latest version of the application from here. It is better to download it straight to the mobile itself and see if the platform can install it. Some Nokia phones need a JAD file to go along with the binary, in order for it to be installed. This can be found here.
+If, for some odd reason, you have to type in that long URL into the browser of your mobile to get the binary, here's a Tiny URL to help you out: http://tinyurl.com/n26lpu.
+Ofcourse, if your phone has Bluetooth, you can always download the files to your PC and then upload through Bluetooth.
+
+4.1 Before you install...
+=========================
+A couple of lines on usability here. J2ME apps suffer from all kind of restrictions by design to ensure that nobody can access your private data on the phone or do anything mischievous just because your trustingly installed an application that you thought is cool, but did not check the fine-print.
+As a result of the above, the phone will, very likely, ask you to give permission to the application to access your GPS device and your web connection at an irritating frequency. Commercial grade vendors get around this bad experience by signing their applications with verification certificates that the mobile can trust. But, this is too much of a trouble for small hobbyists like me. Of course, if there are enough people using it, I will surely do that, but not now.
+I know that Nokia phones have a way to give one time permissions for these kind of things to installed applications, but it differs from model to model. One that I know is:
+“...Go to the main menu. Click on Tools, then start the App. mgr. 
+Find the Updater in the list of installed apps and open it either with 'Suite Settings' or 'Open'. 
+You'll see a list of settings for the application. You can set a default access point if you like. Make sure to set "Network access" and "Positioning" to "Ask first time". After setting that up, you should only be asked once when you start the application. 
+...” (taken from Simon King's Fire Eagle J2ME updater page)
+On other platforms also (like Sony Ericson), this should be possible, but you got to figure it out yourself. If you can, and want that knowledge to be posted here, please mail me and I will trustingly put it up.
+
+5. I installed it. Now what?
+============================
+I am being very terse here. There are a huge number of combinations possible, but I would like to focus on the most important ones and leave the rest for you to explore. Please write back if you think a particular state of the application is too confusing, and I will add the details here. Also, feel free to pont out mistakes in this documentation.
+
+5.1 The first screen
+====================
+On starting the application for the first time, the first screen urges you to authorize with Fire Eagle. You can bypass it if you must. To authorize, you need to choose Fire Eagle from the menu and proceed.
+
+5.1.1 Authorizing Fire Eagle
+============================
+The process of authorization is a bit cumbersome and tedious at the moment because of various J2ME limitations, but overall it boils down to:
+1.The application contacts the Fire Eagle web site and get's you a one-time token that it displays. This token is valid for an hour.
+2.You visit the URL shown in the application and log in with your Yahoo! ID.
+3.The web site will request you to type in the token shown to you by the application.
+4.If you did so correctly, it will ask you to set permissions for GeoCrawler.
+5.Once you say 'Confirm' in the web site, it generates another token for you to type back in to the application.
+Yes. A lot of typing things in, I know. But, remember it is a one-time job. The application remembers your authorization on the mobile phone, so it will not pester you in the future.
+
+5.1.2 Deauthorizing Fire Eagle
+==============================
+If you are giving your phone to someone else, it is better to deauthorize (forget the authorization) Fire Eagle for the application. To do so, you can, in future (and after being successfully authorized), choose the Fire Eagle item from the main menu and then click 'Reset'.
+
+5.2 The Main Menu
+=================
+Here's a run down of what all you can access from the main menu, whether or not you are authorized with Fire Eagle.
+Before we start describing these, note that, as I shall describe later, the behavior of the first screen changes once you authorize with Fire Eagle. It shall, if it can detect a location for you, jump directly into the My Location screen and you will have to press a Back button to come back and access these menu items.
+
+5.2.1 My Location
+=================
+This screen is pretty much the main display of the application. It shows where the application thinks you currently are. If the application cannot detect a location for you, then it will prevent you from visiting this screen.
+
+5.2.2 Show Details
+==================
+It will show you the details about how and when your location was sensed by the application. You can use it first to see if the phone can actually auto detect your location. This is independent of Fire Eagle authorization. More of a debug screen in case you suspect that the auto updater is not working.
+Note that GPS sensing takes some time and does not work indoors.
+
+5.2.3 Manual Location
+=====================
+Needs Fire Eagle authorization to translate a string to a location.
+Go and type in a location yourself. If the phone can detect GPS data (or somehow else divine your latitude-longitude), it will show it in the non-editable fields. This is a good way to also check if the phone is detecting your cell tower or not. If it does, those other non editable fields like MCC, MNC, ... will also be showing some values.
+I would love to know if the Cell ID detection works in your phone. Till date, I have had no luck.
+
+5.2.4 Config
+============
+The tweakables. Most of this is best left as defaults. I will add a section on which does soon. Changes made here are also remembered by the application.
+
+5.2.5 Last Error
+================
+Yet another debug screen. I have not been able to capture all the possible errors for display in this screen, but many will show up. If you suspect that the application is not doing something it should, it is valuable to check this out.
+Note: Due to a bug in the code (I will fix it later), some of the other information (not errors) can show up in this screen if they have been viewed since the application detected any error worth displayable.
+
+5.2.6 Fire Eagle
+================
+Mostly should be a one-time visit to authorize the application. As mentioned above, you may want to visit it later to deauthorize the application in case you are giving the phone to someone else.
+
+5.2.7 Check Update
+==================
+Just a utility so that you don't have to remember where to visit to see if there are some important bug fixes that you would like to get.
+
+5.3 The My Location screen
+==========================
+This is the real screen. You can do most of the stuff from here. By default, you are centered on the map, unless you want to move around
+
+5.3.1 Context change
+====================
+The 'C' (for Cancel) button is used to change context. It is a bit messy in use and I plan to change that soon. Right now, you can think of there being 3 modes:
+
+*Summary*: Where your current location summary is displayed at the top of the map if you are centered on your current location. This is the default mode. Pressing the 'C' clears out the summary, which is the only difference with the next mode.
+
+*Clear*: Same mode as summary, but there is no summary. All other key behavior is the same. Pressing a 'C' here brings you to the next mode.
+
+*Roam*: When you have some items turned up in the map around you, you will be able to shift focus to those items. Your map does not change to center on them, only those small crosshairs turn from black to red. In this mode, a small summary is attempted for the object that is currently red in the map. Pressing a 'C' here would rotate you back to the 'Summary' mode again.
+Note: When the map is not centered on you in any of the modes, the 'C' button will additionally bring it back to the view where you are at the center.
+
+5.3.2 Navigation
+================
+Note: Zoom in and Zoom out are available in all the above modes (contexts). But, in Roam mode, the Left/Right/Up/Down keys are to be used to rotate through the other items on the map (those black small crosshairs that turn up as the result of your query).
+
+- Left, Right, Up and Down keys move the map in the desired directions. The shift amount is fixed for different zoom levels.
+- Zoom in '*' lets you see more details by concentrating on a smaller section of the map around you.
+- Zoom out '#' does the opposite of zoom out.
+
+5.3.3 Fire
+==========
+The small round button in the center of the Left/Right/Up/Down keys is the one I call 'Fire' (because it is used as one in games). Based on the context (mode), it has different functionality...
+
+1.When you are centered on yourself in Summary or Clear mode, it shows you a screen with your location as a human readable string. Needs Fire Eagle authorization.
+
+2.When you are in Summary or Clear mode, it will update your location to what ever is the center of the map when you click. This is one means of updating location manually.
+
+3.When you are in the Roam mode, the Fire button can be used to see more detailed info about the item in the map which is the current red crosshair.
+
+5.4 Searching
+=============
+Yahoo! Local searches need a search query. Upcoming events simply try to retrieve the first few 'recommended' venues according to ranking (also called 'Best in Place').
+Unfortunately, my tests show that Locals search works only for US cities, and the Upcoming event service is not getting fixed (according to the responses I got), before September 09 end.
+
+6. Why does it not have...
+==========================
+
+6.1 An icon
+===========
+Well, I would like to have one. But, I need to read up more on how to put it there.
+
+6.2 Background Run
+==================
+Background run capabilities are important for updaters. But, I have had a debate over this with some and the argument is... “If my spouse thought I was cheating and put a background updater in my phone to track me, how will I know that it is running?” That is a BIG privacy concern. Better to think it through before putting it in. So, it has to wait.
+
+7. About me
+===========
+My name is Arnab Nandi. Writing software is both my hobby and also work. You can contact me at arnob.nandi@gmail.com. 
+Please feel free to contact me with your feedback, whether it is about a serious bug or a feature you would like to see or something that you found out that people should know of... I would love to hear from you.
